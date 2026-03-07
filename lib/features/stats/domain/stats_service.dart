@@ -1,6 +1,7 @@
 import '../../habits/data/models/habit.dart';
 import '../../proof/data/models/proof_entry.dart';
 import '../../../core/utils/app_date_utils.dart';
+import 'weekly_review.dart';
 
 class StatsService {
   /// Calculates the current streak for [habit] given all [entries].
@@ -179,6 +180,165 @@ class StatsService {
       }
     }
     return best;
+  }
+
+  /// Builds the full [WeeklyReviewData] for the Mon–Sun window starting at
+  /// [weekStart]. Pass the complete habit list and all proof entries.
+  static WeeklyReviewData getWeeklyReview({
+    required DateTime weekStart,
+    required List<Habit> habits,
+    required List<ProofEntry> allEntries,
+    required List<String> usedFreezes,
+  }) {
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final activeHabits = habits.where((h) => !h.isArchived).toList();
+
+    // Entries that fall within this week
+    final weekEntries = allEntries.where((e) {
+      final d = AppDateUtils.utcDate(e.completedAt.toLocal());
+      return !d.isBefore(weekStart) && !d.isAfter(weekEnd);
+    }).toList();
+
+    // Scheduled habit-days in the week (denominator)
+    int totalScheduled = 0;
+    for (final habit in activeHabits) {
+      for (int d = 0; d < 7; d++) {
+        final day = weekStart.add(Duration(days: d));
+        if (habit.isScheduledOn(day.weekday)) totalScheduled++;
+      }
+    }
+
+    final totalCompletions = weekEntries
+        .map((e) => e.habitId)
+        .toSet()
+        .fold<int>(0, (sum, habitId) {
+      // Count distinct habit-days completed in the week for this habit
+      return sum +
+          weekEntries
+              .where((e) => e.habitId == habitId)
+              .map((e) => AppDateUtils.utcDate(e.completedAt.toLocal()))
+              .toSet()
+              .length;
+    });
+
+    final completionRate = totalScheduled == 0
+        ? 0.0
+        : (totalCompletions / totalScheduled).clamp(0.0, 1.0);
+
+    // Best day of the week
+    int bestDayWeekday = 0;
+    int bestDayCount = 0;
+    for (int d = 0; d < 7; d++) {
+      final day = weekStart.add(Duration(days: d));
+      final count = weekEntries
+          .where((e) =>
+              AppDateUtils.isSameDay(e.completedAt.toLocal(), day))
+          .map((e) => e.habitId)
+          .toSet()
+          .length;
+      if (count > bestDayCount) {
+        bestDayCount = count;
+        bestDayWeekday = day.weekday;
+      }
+    }
+
+    // Per-habit streak + milestone info
+    final streaks = <HabitStreakInfo>[];
+    for (final habit in activeHabits) {
+      final habitEntries = allEntries
+          .where((e) => e.habitId == habit.id)
+          .toList();
+      final streak = _calculateStreak(
+        habit: habit,
+        completedDates: _completedDates(habit.id, habitEntries),
+        usedFreezes: usedFreezes,
+        fromDate: weekEnd,
+      );
+      if (streak == 0) continue;
+
+      // Milestone: streak is a positive multiple of 7 and the habit
+      // completed at least once this week.
+      final completedThisWeek =
+          weekEntries.any((e) => e.habitId == habit.id);
+      final milestone =
+          (streak > 0 && streak % 7 == 0 && completedThisWeek) ? streak : null;
+
+      streaks.add(HabitStreakInfo(
+        habitName: habit.name,
+        habitEmoji: habit.emoji,
+        currentStreak: streak,
+        milestoneThisWeek: milestone,
+      ));
+    }
+    streaks.sort((a, b) => b.currentStreak.compareTo(a.currentStreak));
+
+    // Photo highlights — up to 5
+    // Build map of habitId → current streak for priority sorting
+    final streakMap = {
+      for (final s in streaks) s.habitName: s.currentStreak,
+    };
+    final habitMap = {for (final h in activeHabits) h.id: h};
+
+    final sortedEntries = List<ProofEntry>.from(weekEntries)
+      ..sort((a, b) {
+        final aHasNote = (a.note?.isNotEmpty ?? false) ? 1 : 0;
+        final bHasNote = (b.note?.isNotEmpty ?? false) ? 1 : 0;
+        if (aHasNote != bHasNote) return bHasNote - aHasNote;
+
+        final aStreak = streakMap[habitMap[a.habitId]?.name] ?? 0;
+        final bStreak = streakMap[habitMap[b.habitId]?.name] ?? 0;
+        if (aStreak != bStreak) return bStreak - aStreak;
+
+        return b.completedAt.compareTo(a.completedAt);
+      });
+
+    // De-duplicate: one entry per habit
+    final seen = <String>{};
+    final highlightEntries = <ProofEntry>[];
+    for (final e in sortedEntries) {
+      if (seen.add(e.habitId)) highlightEntries.add(e);
+      if (highlightEntries.length >= 5) break;
+    }
+
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final highlights = highlightEntries.map((e) {
+      final habit = habitMap[e.habitId];
+      final local = e.completedAt.toLocal();
+      final label = dayLabels[local.weekday - 1];
+      return WeeklyHighlight(
+        entry: e,
+        habitEmoji: habit?.emoji ?? '❓',
+        habitName: habit?.name ?? 'Deleted habit',
+        dayLabel: label,
+      );
+    }).toList();
+
+    return WeeklyReviewData(
+      weekStart: weekStart,
+      weekEnd: weekEnd,
+      totalCompletions: totalCompletions,
+      totalScheduled: totalScheduled,
+      completionRate: completionRate,
+      bestDayWeekday: bestDayWeekday,
+      bestDayCount: bestDayCount,
+      streaks: streaks,
+      highlights: highlights,
+    );
+  }
+
+  /// Streak for [habit] as of [asOf] date (used for historical calculations).
+  static int currentStreakAsOf(
+    Habit habit,
+    List<ProofEntry> entries,
+    List<String> usedFreezes,
+    DateTime asOf,
+  ) {
+    return _calculateStreak(
+      habit: habit,
+      completedDates: _completedDates(habit.id, entries),
+      usedFreezes: usedFreezes,
+      fromDate: asOf,
+    );
   }
 
   // --- Private helpers ---

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
+import 'core/utils/app_date_utils.dart';
 import 'features/habits/presentation/screens/home_screen.dart';
 import 'features/habits/presentation/screens/create_habit_screen.dart';
 import 'features/proof/presentation/screens/capture_proof_screen.dart';
@@ -10,6 +11,10 @@ import 'features/timeline/presentation/screens/timeline_screen.dart';
 import 'features/stats/presentation/screens/stats_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'features/settings/presentation/controllers/settings_controller.dart';
+import 'features/habits/presentation/controllers/habit_controller.dart';
+import 'features/proof/presentation/controllers/proof_controller.dart';
+import 'features/stats/domain/stats_service.dart';
+import 'features/stats/presentation/widgets/weekly_review_sheet.dart';
 import 'shared/widgets/app_bottom_nav.dart';
 
 class ProofApp extends ConsumerWidget {
@@ -77,6 +82,7 @@ class _AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<_AppShell> {
   int _currentIndex = 0;
+  bool _reviewScheduled = false;
 
   static const _screens = [
     HomeScreen(),
@@ -84,6 +90,14 @@ class _AppShellState extends ConsumerState<_AppShell> {
     StatsScreen(),
     SettingsScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeShowWeeklyReview();
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -104,6 +118,56 @@ class _AppShellState extends ConsumerState<_AppShell> {
     }
   }
 
+  void _maybeShowWeeklyReview() {
+    if (_reviewScheduled) return;
+    final now = DateTime.now();
+    if (now.weekday != DateTime.monday) return;
+
+    final settings = ref.read(settingsProvider);
+    final currentWeek = AppDateUtils.isoWeekString(now);
+    if (settings.lastReviewShownWeek == currentWeek) return;
+
+    _reviewScheduled = true;
+    _showWeeklyReview(previousWeek: true);
+  }
+
+  void _showWeeklyReview({bool previousWeek = false}) {
+    final now = DateTime.now();
+    final weekStart = previousWeek
+        ? AppDateUtils.previousWeekStart(now)
+        : AppDateUtils.previousWeekStart(
+            now.add(const Duration(days: 7))); // most recent completed week
+
+    final habits = ref.read(habitsProvider);
+    final allEntries = ref.read(allProofProvider);
+    final settings = ref.read(settingsProvider);
+
+    final review = StatsService.getWeeklyReview(
+      weekStart: weekStart,
+      habits: habits,
+      allEntries: allEntries,
+      usedFreezes: settings.usedFreezes,
+    );
+
+    final currentWeek = AppDateUtils.isoWeekString(now);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => WeeklyReviewSheet(
+        review: review,
+        onDismiss: () {
+          Navigator.of(context).pop();
+          if (previousWeek) {
+            // Mark as shown so it doesn't reappear this Monday
+            ref.read(settingsProvider.notifier).markReviewShown(currentWeek);
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,4 +181,30 @@ class _AppShellState extends ConsumerState<_AppShell> {
       ),
     );
   }
+}
+
+/// Shows the Weekly Review sheet for the most recently completed Mon–Sun week.
+/// Can be called from any screen that has a [BuildContext] and [WidgetRef].
+void showWeeklyReview(BuildContext context, WidgetRef ref) {
+  final now = DateTime.now();
+  // "Most recent completed week" = previous Mon–Sun, regardless of current day
+  final weekStart = AppDateUtils.previousWeekStart(now);
+
+  final habits = ref.read(habitsProvider);
+  final allEntries = ref.read(allProofProvider);
+  final settings = ref.read(settingsProvider);
+
+  final review = StatsService.getWeeklyReview(
+    weekStart: weekStart,
+    habits: habits,
+    allEntries: allEntries,
+    usedFreezes: settings.usedFreezes,
+  );
+
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => WeeklyReviewSheet(review: review),
+  );
 }

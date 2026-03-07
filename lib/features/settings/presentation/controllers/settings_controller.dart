@@ -88,4 +88,10 @@ class SettingsController extends StateNotifier<UserSettings> {
   }
 
   bool isFreezeUsed(String dateStr) => state.usedFreezes.contains(dateStr);
+
+  Future<void> markReviewShown(String isoWeek) async {
+    final updated = state.copyWith(lastReviewShownWeek: isoWeek);
+    await _repo.save(updated);
+    state = updated;
+  }
 }

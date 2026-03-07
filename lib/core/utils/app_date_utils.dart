@@ -76,6 +76,35 @@ abstract final class AppDateUtils {
   static String todayFormatted() =>
       DateFormat('EEEE, MMMM d').format(DateTime.now());
 
+  /// Returns the ISO 8601 week string for [dt], e.g. "2026-W10".
+  /// Uses the ISO definition: week 1 has the year's first Thursday.
+  static String isoWeekString(DateTime dt) {
+    // Shift to Thursday of the same week (ISO anchor day)
+    final thursday = dt.add(Duration(days: DateTime.thursday - dt.weekday));
+    final year = thursday.year;
+    // First Thursday of that year
+    final jan4 = DateTime(year, 1, 4);
+    final firstThursday = jan4.add(
+        Duration(days: (DateTime.thursday - jan4.weekday + 7) % 7));
+    final weekNo =
+        1 + (thursday.difference(firstThursday).inDays / 7).floor();
+    return '$year-W${weekNo.toString().padLeft(2, '0')}';
+  }
+
+  /// Returns the start-of-week (Monday) for the *previous* Mon–Sun window
+  /// relative to [now]. If [now] is Monday, goes back 7 days to last Monday.
+  static DateTime previousWeekStart(DateTime now) {
+    final thisMonday = startOfWeek(now);
+    return thisMonday.subtract(const Duration(days: 7));
+  }
+
+  /// Formats a date range like "Feb 23 – Mar 1, 2026".
+  static String formatWeekRange(DateTime start, DateTime end) {
+    final s = DateFormat('MMM d').format(start);
+    final e = DateFormat('MMM d, yyyy').format(end);
+    return '$s – $e';
+  }
+
   /// Returns all days in the given month.
   static List<DateTime> daysInMonth(int year, int month) {
     final first = DateTime.utc(year, month, 1);

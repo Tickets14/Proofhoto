@@ -22,6 +22,11 @@ class UserSettings extends HiveObject {
   @HiveField(4)
   late String themeMode;
 
+  /// ISO week string ("yyyy-Www") of the last weekly review shown.
+  /// Null means the review has never been shown.
+  @HiveField(5)
+  String? lastReviewShownWeek;
+
   /// Returns a new [UserSettings] instance with updated fields.
   /// Required because [HiveObject] is a mutable reference type — mutating the
   /// existing instance and reassigning to [StateNotifier.state] is a no-op
@@ -32,12 +37,18 @@ class UserSettings extends HiveObject {
     int? streakFreezeCount,
     List<String>? usedFreezes,
     String? themeMode,
+    Object? lastReviewShownWeek = _sentinel,
   }) {
     return UserSettings()
       ..isDarkMode = isDarkMode ?? this.isDarkMode
       ..notificationsEnabled = notificationsEnabled ?? this.notificationsEnabled
       ..streakFreezeCount = streakFreezeCount ?? this.streakFreezeCount
       ..usedFreezes = usedFreezes ?? this.usedFreezes
-      ..themeMode = themeMode ?? this.themeMode;
+      ..themeMode = themeMode ?? this.themeMode
+      ..lastReviewShownWeek = identical(lastReviewShownWeek, _sentinel)
+          ? this.lastReviewShownWeek
+          : lastReviewShownWeek as String?;
   }
+
+  static const _sentinel = Object();
 }

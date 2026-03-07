@@ -9,6 +9,7 @@ import '../../../settings/presentation/controllers/settings_controller.dart';
 import '../../../stats/domain/stats_service.dart';
 import '../../../categories/data/models/habit_category.dart';
 import '../../../categories/presentation/controllers/category_controller.dart';
+import '../../../../app.dart' show showWeeklyReview;
 import '../widgets/streak_card.dart';
 import '../widgets/weekly_bar_chart.dart';
 import '../widgets/monthly_heatmap.dart';
@@ -66,6 +67,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Statistics'),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('Week Review'),
+            onPressed: () => showWeeklyReview(context, ref),
+          ),
+          const SizedBox(width: 4),
+        ],
         bottom: TabBar(
           controller: _tabCtrl,
           tabs: const [Tab(text: 'Overview'), Tab(text: 'Per Habit')],

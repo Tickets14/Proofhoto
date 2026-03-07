@@ -21,13 +21,14 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       ..notificationsEnabled = fields[1] as bool
       ..streakFreezeCount = fields[2] as int
       ..usedFreezes = (fields[3] as List).cast<String>()
-      ..themeMode = fields[4] == null ? 'system' : fields[4] as String;
+      ..themeMode = fields[4] == null ? 'system' : fields[4] as String
+      ..lastReviewShownWeek = fields[5] as String?;
   }
 
   @override
   void write(BinaryWriter writer, UserSettings obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.isDarkMode)
       ..writeByte(1)
@@ -37,7 +38,9 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       ..writeByte(3)
       ..write(obj.usedFreezes)
       ..writeByte(4)
-      ..write(obj.themeMode);
+      ..write(obj.themeMode)
+      ..writeByte(5)
+      ..write(obj.lastReviewShownWeek);
   }
 
   @override
