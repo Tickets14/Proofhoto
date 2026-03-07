@@ -7,6 +7,7 @@ abstract final class AppRoutes {
   static const editHabit = '/habits/edit';
   static const captureProof = '/proof/capture';
   static const proofDetail = '/proof/detail';
+  static const badges = '/badges';
 
   /// Global navigator key — used by NotificationUtils to push routes
   /// directly from the notification callback (foreground + background taps).

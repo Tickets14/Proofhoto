@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import '../controllers/proof_controller.dart';
 import '../../../habits/data/models/habit.dart';
 import '../../../habits/presentation/controllers/habit_controller.dart';
+import '../../../achievements/presentation/controllers/achievement_controller.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 
@@ -146,6 +147,7 @@ class _CaptureProofScreenState extends ConsumerState<CaptureProofScreen>
             );
       }
       await ref.read(habitsProvider.notifier).checkMilestone(widget.habitId);
+      await ref.read(achievementsProvider.notifier).checkAndAward();
 
       if (mounted) {
         setState(() {

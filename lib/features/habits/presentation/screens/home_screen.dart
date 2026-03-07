@@ -11,6 +11,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../features/categories/presentation/controllers/category_controller.dart';
 import '../../../../features/categories/data/models/habit_category.dart';
+import '../../../../features/achievements/presentation/controllers/achievement_controller.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -22,6 +23,7 @@ class HomeScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final categories = ref.watch(categoriesProvider);
     final activeFilter = ref.watch(categoryFilterProvider);
+    final unseenBadgeCount = ref.watch(unseenAchievementsProvider).length;
     final dateStr = _todayStr();
 
     // Apply category filter
@@ -43,6 +45,7 @@ class HomeScreen extends ConsumerWidget {
             delegate: _HomeHeaderDelegate(
               completed: completed,
               total: todayHabits.length,
+              unseenBadgeCount: unseenBadgeCount,
             ),
           ),
 
@@ -224,10 +227,15 @@ class _Chip extends StatelessWidget {
 // ── Collapsible header delegate ─────────────────────────────────────────────
 
 class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _HomeHeaderDelegate({required this.completed, required this.total});
+  const _HomeHeaderDelegate({
+    required this.completed,
+    required this.total,
+    required this.unseenBadgeCount,
+  });
 
   final int completed;
   final int total;
+  final int unseenBadgeCount;
 
   @override
   double get minExtent => 80;
@@ -284,6 +292,39 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
               ],
             ),
           ),
+          // Trophy / badges button with unseen badge indicator
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.emoji_events_outlined),
+                tooltip: 'Badges',
+                onPressed: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.badges),
+              ),
+              if (unseenBadgeCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      unseenBadgeCount > 9 ? '9+' : '$unseenBadgeCount',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
@@ -308,5 +349,7 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_HomeHeaderDelegate old) =>
-      old.completed != completed || old.total != total;
+      old.completed != completed ||
+      old.total != total ||
+      old.unseenBadgeCount != unseenBadgeCount;
 }

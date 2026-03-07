@@ -15,6 +15,9 @@ import 'features/habits/presentation/controllers/habit_controller.dart';
 import 'features/proof/presentation/controllers/proof_controller.dart';
 import 'features/stats/domain/stats_service.dart';
 import 'features/stats/presentation/widgets/weekly_review_sheet.dart';
+import 'features/achievements/presentation/controllers/achievement_controller.dart';
+import 'features/achievements/presentation/screens/badges_screen.dart';
+import 'features/achievements/presentation/widgets/achievement_popup.dart';
 import 'shared/widgets/app_bottom_nav.dart';
 
 class ProofApp extends ConsumerWidget {
@@ -53,6 +56,9 @@ class ProofApp extends ConsumerWidget {
         final proofId = settings.arguments as String;
         return _slide(ProofDetailScreen(proofId: proofId));
 
+      case AppRoutes.badges:
+        return _slide(const BadgesScreen());
+
       default:
         return null;
     }
@@ -83,6 +89,7 @@ class _AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<_AppShell> {
   int _currentIndex = 0;
   bool _reviewScheduled = false;
+  bool _isShowingAchievementPopup = false;
 
   static const _screens = [
     HomeScreen(),
@@ -94,8 +101,11 @@ class _AppShellState extends ConsumerState<_AppShell> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _maybeShowWeeklyReview();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      _maybeShowWeeklyReview();
+      await ref.read(achievementsProvider.notifier).checkAndAward();
+      if (mounted) _showNextUnseenAchievement();
     });
   }
 
@@ -129,6 +139,33 @@ class _AppShellState extends ConsumerState<_AppShell> {
 
     _reviewScheduled = true;
     _showWeeklyReview(previousWeek: true);
+  }
+
+  void _showNextUnseenAchievement() {
+    if (!mounted || _isShowingAchievementPopup) return;
+    final unseen = ref.read(unseenAchievementsProvider);
+    if (unseen.isEmpty) return;
+
+    _isShowingAchievementPopup = true;
+    final achievement = unseen.first;
+    final habits = ref.read(habitsProvider);
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AchievementPopup(
+        achievement: achievement,
+        habits: habits,
+        onDismiss: () async {
+          Navigator.of(context).pop();
+          await ref
+              .read(achievementsProvider.notifier)
+              .markAsSeen(achievement.id, achievement.habitId);
+          _isShowingAchievementPopup = false;
+          _showNextUnseenAchievement();
+        },
+      ),
+    );
   }
 
   void _showWeeklyReview({bool previousWeek = false}) {
@@ -170,6 +207,15 @@ class _AppShellState extends ConsumerState<_AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // React to newly unlocked achievements (e.g., after saving proof)
+    ref.listen<List>(unseenAchievementsProvider, (prev, next) {
+      if (next.isNotEmpty && !_isShowingAchievementPopup) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showNextUnseenAchievement();
+        });
+      }
+    });
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,

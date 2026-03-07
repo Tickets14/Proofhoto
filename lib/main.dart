@@ -6,6 +6,7 @@ import 'features/habits/data/models/habit.dart';
 import 'features/proof/data/models/proof_entry.dart';
 import 'features/settings/data/models/user_settings.dart';
 import 'features/categories/data/models/habit_category.dart';
+import 'features/achievements/data/models/achievement.dart';
 import 'core/constants/app_constants.dart';
 import 'core/utils/notification_utils.dart';
 import 'app.dart';
@@ -21,6 +22,7 @@ void main() async {
   Hive.registerAdapter(ProofEntryAdapter());
   Hive.registerAdapter(UserSettingsAdapter());
   Hive.registerAdapter(HabitCategoryAdapter());
+  Hive.registerAdapter(AchievementAdapter());
 
   // Open all boxes before the app starts
   await Future.wait([
@@ -28,6 +30,7 @@ void main() async {
     Hive.openBox<ProofEntry>(AppConstants.proofEntriesBox),
     Hive.openBox<UserSettings>(AppConstants.settingsBox),
     Hive.openBox<HabitCategory>(AppConstants.categoriesBox),
+    Hive.openBox<Achievement>(AppConstants.achievementsBox),
   ]);
 
   // ── Seed default categories on first launch ──────────────────────────────

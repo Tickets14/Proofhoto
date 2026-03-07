@@ -10,6 +10,10 @@ import '../../../stats/domain/stats_service.dart';
 import '../../../categories/data/models/habit_category.dart';
 import '../../../categories/presentation/controllers/category_controller.dart';
 import '../../../../app.dart' show showWeeklyReview;
+import '../../../../core/router/app_router.dart';
+import '../../../achievements/data/models/achievement.dart';
+import '../../../achievements/data/models/badge_definitions.dart';
+import '../../../achievements/presentation/controllers/achievement_controller.dart';
 import '../widgets/streak_card.dart';
 import '../widgets/weekly_bar_chart.dart';
 import '../widgets/monthly_heatmap.dart';
@@ -51,6 +55,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     final allEntries = ref.watch(allProofProvider);
     final settings = ref.watch(settingsProvider);
     final categories = ref.watch(categoriesProvider);
+    final achievements = ref.watch(achievementsProvider);
 
     if (habits.isEmpty) {
       return const Scaffold(
@@ -88,6 +93,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
             allEntries: allEntries,
             settings: settings,
             categories: categories,
+            achievements: achievements,
             now: now,
           ),
           _PerHabitTab(
@@ -112,6 +118,7 @@ class _OverviewTab extends StatelessWidget {
     required this.allEntries,
     required this.settings,
     required this.categories,
+    required this.achievements,
     required this.now,
   });
 
@@ -119,6 +126,7 @@ class _OverviewTab extends StatelessWidget {
   final List<ProofEntry> allEntries;
   final UserSettings settings;
   final List<HabitCategory> categories;
+  final List<Achievement> achievements;
   final DateTime now;
 
   @override
@@ -161,6 +169,10 @@ class _OverviewTab extends StatelessWidget {
           currentStreak: bestCurrentStreak,
           bestStreak: bestAllTimeStreak,
         ),
+        if (achievements.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _RecentAchievements(achievements: achievements),
+        ],
         const SizedBox(height: 16),
         _SectionCard(
           title: "Today's Score",
@@ -560,6 +572,55 @@ class _TodayScoreRow extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Recent Achievements ───────────────────────────────────────────────────────
+
+class _RecentAchievements extends StatelessWidget {
+  const _RecentAchievements({required this.achievements});
+  final List<Achievement> achievements;
+
+  @override
+  Widget build(BuildContext context) {
+    // Last 3 unlocked, newest first
+    final recent = achievements.take(3).toList();
+
+    return Row(
+      children: [
+        Expanded(
+          child: Row(
+            children: recent.map((a) {
+              final badge = badgeById(a.id);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Tooltip(
+                  message: badge?.name ?? a.id,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.amber.withValues(alpha: 0.12),
+                      border: Border.all(
+                          color: Colors.amber.withValues(alpha: 0.4)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(badge?.emoji ?? '🏅',
+                        style: const TextStyle(fontSize: 22)),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        TextButton(
+          onPressed: () =>
+              Navigator.of(context).pushNamed(AppRoutes.badges),
+          child: const Text('See all →'),
         ),
       ],
     );

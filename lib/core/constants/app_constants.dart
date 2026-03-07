@@ -5,6 +5,7 @@ abstract final class AppConstants {
   static const settingsBox = 'settings';
   static const settingsKey = 'userSettings';
   static const categoriesBox = 'categories';
+  static const achievementsBox = 'achievements';
 
   // Image settings
   static const imageMaxWidth = 1080;
