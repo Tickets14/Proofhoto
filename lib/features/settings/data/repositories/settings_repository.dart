@@ -15,7 +15,10 @@ class SettingsRepository {
         ..notificationsEnabled = true
         ..streakFreezeCount = 0
         ..usedFreezes = []
-        ..themeMode = 'system';
+        ..themeMode = 'system'
+        ..focusModeEnabled = false
+        ..focusModeStartTime = '06:00'
+        ..focusModeEndTime = '12:00';
       _box.put(AppConstants.settingsKey, s);
     }
     return s;

@@ -22,13 +22,16 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       ..streakFreezeCount = fields[2] as int
       ..usedFreezes = (fields[3] as List).cast<String>()
       ..themeMode = fields[4] == null ? 'system' : fields[4] as String
-      ..lastReviewShownWeek = fields[5] as String?;
+      ..lastReviewShownWeek = fields[5] as String?
+      ..focusModeEnabled = fields[6] == null ? false : fields[6] as bool
+      ..focusModeStartTime = fields[7] as String?
+      ..focusModeEndTime = fields[8] as String?;
   }
 
   @override
   void write(BinaryWriter writer, UserSettings obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.isDarkMode)
       ..writeByte(1)
@@ -40,7 +43,13 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       ..writeByte(4)
       ..write(obj.themeMode)
       ..writeByte(5)
-      ..write(obj.lastReviewShownWeek);
+      ..write(obj.lastReviewShownWeek)
+      ..writeByte(6)
+      ..write(obj.focusModeEnabled)
+      ..writeByte(7)
+      ..write(obj.focusModeStartTime)
+      ..writeByte(8)
+      ..write(obj.focusModeEndTime);
   }
 
   @override

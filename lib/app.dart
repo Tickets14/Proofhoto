@@ -18,6 +18,7 @@ import 'features/stats/presentation/widgets/weekly_review_sheet.dart';
 import 'features/achievements/presentation/controllers/achievement_controller.dart';
 import 'features/achievements/presentation/screens/badges_screen.dart';
 import 'features/achievements/presentation/widgets/achievement_popup.dart';
+import 'features/focus/presentation/screens/focus_mode_screen.dart';
 import 'shared/widgets/app_bottom_nav.dart';
 
 class ProofApp extends ConsumerWidget {
@@ -86,7 +87,8 @@ class _AppShell extends ConsumerStatefulWidget {
   ConsumerState<_AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<_AppShell> {
+class _AppShellState extends ConsumerState<_AppShell>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _reviewScheduled = false;
   bool _isShowingAchievementPopup = false;
@@ -101,8 +103,10 @@ class _AppShellState extends ConsumerState<_AppShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      _maybeShowFocusMode();
       _maybeShowWeeklyReview();
       await ref.read(achievementsProvider.notifier).checkAndAward();
       if (mounted) _showNextUnseenAchievement();
@@ -110,9 +114,69 @@ class _AppShellState extends ConsumerState<_AppShell> {
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _maybeShowFocusMode();
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _checkPendingNotification();
+  }
+
+  void _maybeShowFocusMode() {
+    if (!mounted) return;
+    final settings = ref.read(settingsProvider);
+    if (!settings.focusModeEnabled) return;
+
+    final startTime = settings.focusModeStartTime ?? '06:00';
+    final endTime = settings.focusModeEndTime ?? '12:00';
+    final now = DateTime.now();
+    final startParts = startTime.split(':');
+    final endParts = endTime.split(':');
+    final startMinutes =
+        int.parse(startParts[0]) * 60 + int.parse(startParts[1]);
+    final endMinutes = int.parse(endParts[0]) * 60 + int.parse(endParts[1]);
+    final nowMinutes = now.hour * 60 + now.minute;
+
+    if (nowMinutes < startMinutes || nowMinutes >= endMinutes) return;
+
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final dismissed = ref.read(focusModeDismissedTodayProvider);
+    if (dismissed == todayStr) return;
+
+    // Only show if there are incomplete habits
+    final habits = ref.read(todayHabitsProvider);
+    final allEntries = ref.read(allProofProvider);
+    final completedCount = habits
+        .where((h) => allEntries.any((e) =>
+            e.habitId == h.id &&
+            AppDateUtils.isSameDay(e.completedAt.toLocal(), now)))
+        .length;
+    if (completedCount >= habits.length && habits.isNotEmpty) return;
+    if (habits.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).push(
+        PageRouteBuilder<void>(
+          pageBuilder: (_, __, ___) => const FocusModeScreen(),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        ),
+      );
+    });
   }
 
   void _checkPendingNotification() {

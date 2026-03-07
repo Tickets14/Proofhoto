@@ -94,4 +94,22 @@ class SettingsController extends StateNotifier<UserSettings> {
     await _repo.save(updated);
     state = updated;
   }
+
+  Future<void> setFocusModeEnabled(bool enabled) async {
+    final updated = state.copyWith(focusModeEnabled: enabled);
+    await _repo.save(updated);
+    state = updated;
+  }
+
+  Future<void> setFocusModeStartTime(String hhmm) async {
+    final updated = state.copyWith(focusModeStartTime: hhmm);
+    await _repo.save(updated);
+    state = updated;
+  }
+
+  Future<void> setFocusModeEndTime(String hhmm) async {
+    final updated = state.copyWith(focusModeEndTime: hhmm);
+    await _repo.save(updated);
+    state = updated;
+  }
 }

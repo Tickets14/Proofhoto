@@ -147,6 +147,80 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
+          // ── Focus Mode ────────────────────────────────────────────────
+          _SectionHeader('Focus Mode'),
+          _SettingsCard(
+            children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.center_focus_strong_outlined),
+                title: const Text('Enable Focus Mode'),
+                subtitle: const Text(
+                    'Show a full-screen reminder when habits are due'),
+                value: settings.focusModeEnabled,
+                onChanged: (v) => ctrl.setFocusModeEnabled(v),
+              ),
+              if (settings.focusModeEnabled) ...[
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.schedule_outlined),
+                  title: const Text('Start time'),
+                  trailing: Text(
+                    settings.focusModeStartTime ?? '06:00',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  onTap: () async {
+                    final parts =
+                        (settings.focusModeStartTime ?? '06:00').split(':');
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay(
+                        hour: int.parse(parts[0]),
+                        minute: int.parse(parts[1]),
+                      ),
+                    );
+                    if (picked != null) {
+                      final hhmm =
+                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                      ctrl.setFocusModeStartTime(hhmm);
+                    }
+                  },
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.schedule_outlined),
+                  title: const Text('End time'),
+                  trailing: Text(
+                    settings.focusModeEndTime ?? '12:00',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  onTap: () async {
+                    final parts =
+                        (settings.focusModeEndTime ?? '12:00').split(':');
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay(
+                        hour: int.parse(parts[0]),
+                        minute: int.parse(parts[1]),
+                      ),
+                    );
+                    if (picked != null) {
+                      final hhmm =
+                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                      ctrl.setFocusModeEndTime(hhmm);
+                    }
+                  },
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 20),
+
           // ── Data ──────────────────────────────────────────────────────
           _SectionHeader('Data'),
           _SettingsCard(
