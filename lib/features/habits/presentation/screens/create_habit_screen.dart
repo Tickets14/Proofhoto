@@ -6,6 +6,8 @@ import '../controllers/habit_controller.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
+import '../../../../features/categories/presentation/controllers/category_controller.dart';
+import '../../../../features/categories/presentation/screens/manage_categories_screen.dart';
 
 class CreateHabitScreen extends ConsumerStatefulWidget {
   const CreateHabitScreen({super.key, this.habitId});
@@ -24,6 +26,7 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
   int _colorValue = AppColors.habitColors[0].value;
   List<int> _reminderDays = [1, 2, 3, 4, 5, 6, 7];
   TimeOfDay? _reminderTime;
+  String? _categoryId;
   Habit? _editing;
 
   @override
@@ -37,6 +40,7 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
         _emoji = habit.emoji;
         _colorValue = habit.colorValue;
         _reminderDays = List.from(habit.reminderDays);
+        _categoryId = habit.categoryId;
         if (habit.reminderTime != null) {
           final parts = habit.reminderTime!.split(':');
           _reminderTime = TimeOfDay(
@@ -57,6 +61,7 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = _editing != null;
+    final categories = ref.watch(categoriesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -140,6 +145,57 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
                 onTap: _pickTime,
               ),
             ),
+            const SizedBox(height: 24),
+
+            // Category
+            _Section(
+              title: 'Category',
+              child: DropdownButtonFormField<String?>(
+                value: _categoryId,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.folder_outlined),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('No category'),
+                  ),
+                  ...categories.map((cat) => DropdownMenuItem<String?>(
+                        value: cat.id,
+                        child: Row(
+                          children: [
+                            Text(cat.emoji,
+                                style: const TextStyle(fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Text(cat.name),
+                          ],
+                        ),
+                      )),
+                  const DropdownMenuItem<String?>(
+                    value: '__create__',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add, size: 18),
+                        SizedBox(width: 8),
+                        Text('Create new...'),
+                      ],
+                    ),
+                  ),
+                ],
+                onChanged: (v) async {
+                  if (v == '__create__') {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ManageCategoriesScreen(),
+                      ),
+                    );
+                    // Don't change selection; user can re-pick after creating
+                  } else {
+                    setState(() => _categoryId = v);
+                  }
+                },
+              ),
+            ),
             const SizedBox(height: 40),
 
             // Save button
@@ -187,6 +243,7 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
         colorValue: _colorValue,
         reminderDays: _reminderDays,
         reminderTime: timeStr,
+        categoryId: _categoryId,
       );
     } else {
       await ctrl.createHabit(
@@ -195,6 +252,7 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
         colorValue: _colorValue,
         reminderDays: _reminderDays,
         reminderTime: timeStr,
+        categoryId: _categoryId,
       );
     }
 

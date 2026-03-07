@@ -7,6 +7,8 @@ import '../../../habits/presentation/controllers/habit_controller.dart';
 import '../../../proof/presentation/controllers/proof_controller.dart';
 import '../../../settings/presentation/controllers/settings_controller.dart';
 import '../../../stats/domain/stats_service.dart';
+import '../../../categories/data/models/habit_category.dart';
+import '../../../categories/presentation/controllers/category_controller.dart';
 import '../widgets/streak_card.dart';
 import '../widgets/weekly_bar_chart.dart';
 import '../widgets/monthly_heatmap.dart';
@@ -47,6 +49,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
     final habits = ref.watch(habitsProvider);
     final allEntries = ref.watch(allProofProvider);
     final settings = ref.watch(settingsProvider);
+    final categories = ref.watch(categoriesProvider);
 
     if (habits.isEmpty) {
       return const Scaffold(
@@ -75,12 +78,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
             habits: habits,
             allEntries: allEntries,
             settings: settings,
+            categories: categories,
             now: now,
           ),
           _PerHabitTab(
             habits: habits,
             allEntries: allEntries,
             settings: settings,
+            categories: categories,
             selectedHabitId: _selectedHabitId ?? habits.first.id,
             onHabitChanged: (id) => setState(() => _selectedHabitId = id),
           ),
@@ -97,12 +102,14 @@ class _OverviewTab extends StatelessWidget {
     required this.habits,
     required this.allEntries,
     required this.settings,
+    required this.categories,
     required this.now,
   });
 
   final List<Habit> habits;
   final List<ProofEntry> allEntries;
   final UserSettings settings;
+  final List<HabitCategory> categories;
   final DateTime now;
 
   @override
@@ -171,6 +178,17 @@ class _OverviewTab extends StatelessWidget {
             onDayTap: (date) => _showDayDetail(context, date),
           ),
         ),
+        if (categories.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'By Category',
+            child: _CategoryBreakdown(
+              habits: habits,
+              allEntries: allEntries,
+              categories: categories,
+            ),
+          ),
+        ],
         const SizedBox(height: 80),
       ],
     );
@@ -203,6 +221,7 @@ class _PerHabitTab extends StatelessWidget {
     required this.habits,
     required this.allEntries,
     required this.settings,
+    required this.categories,
     required this.selectedHabitId,
     required this.onHabitChanged,
   });
@@ -210,6 +229,7 @@ class _PerHabitTab extends StatelessWidget {
   final List<Habit> habits;
   final List<ProofEntry> allEntries;
   final UserSettings settings;
+  final List<HabitCategory> categories;
   final String selectedHabitId;
   final ValueChanged<String> onHabitChanged;
 
@@ -220,6 +240,9 @@ class _PerHabitTab extends StatelessWidget {
       orElse: () => habits.first,
     );
     final entries = allEntries.where((e) => e.habitId == habit.id).toList();
+    final category = habit.categoryId != null
+        ? categories.where((c) => c.id == habit.categoryId).firstOrNull
+        : null;
     final currentStreak = StatsService.currentStreak(
       habit, entries, settings.usedFreezes,
       availableFreezes: settings.streakFreezeCount,
@@ -246,6 +269,35 @@ class _PerHabitTab extends StatelessWidget {
             if (id != null) onHabitChanged(id);
           },
         ),
+        if (category != null) ...[
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Color(category.colorValue).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(category.emoji,
+                      style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    category.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(category.colorValue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
 
         // Streak card
@@ -501,6 +553,103 @@ class _TodayScoreRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Category breakdown ────────────────────────────────────────────────────────
+
+class _CategoryBreakdown extends StatelessWidget {
+  const _CategoryBreakdown({
+    required this.habits,
+    required this.allEntries,
+    required this.categories,
+  });
+
+  final List<Habit> habits;
+  final List<ProofEntry> allEntries;
+  final List<HabitCategory> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    // Total completions per category (all time)
+    final Map<String, int> countById = {};
+    for (final entry in allEntries) {
+      final habit = habits.where((h) => h.id == entry.habitId).firstOrNull;
+      if (habit == null) continue;
+      final key = habit.categoryId ?? '__uncategorized__';
+      countById[key] = (countById[key] ?? 0) + 1;
+    }
+
+    final total = countById.values.fold(0, (a, b) => a + b);
+    if (total == 0) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text('No completions yet.'),
+      );
+    }
+
+    final rows = <({String label, String emoji, int count, Color color})>[];
+    for (final cat in categories) {
+      final count = countById[cat.id] ?? 0;
+      if (count == 0) continue;
+      rows.add((
+        label: cat.name,
+        emoji: cat.emoji,
+        count: count,
+        color: Color(cat.colorValue),
+      ));
+    }
+    final uncategorized = countById['__uncategorized__'] ?? 0;
+    if (uncategorized > 0) {
+      rows.add((
+        label: 'Uncategorized',
+        emoji: '🗂️',
+        count: uncategorized,
+        color: Colors.grey,
+      ));
+    }
+    rows.sort((a, b) => b.count.compareTo(a.count));
+
+    return Column(
+      children: rows.map((r) {
+        final ratio = r.count / total;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(r.emoji, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(r.label,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ),
+                  Text(
+                    '${r.count}',
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: ratio,
+                  minHeight: 6,
+                  backgroundColor: r.color.withValues(alpha: 0.12),
+                  valueColor: AlwaysStoppedAnimation<Color>(r.color),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

@@ -17,6 +17,7 @@ class HabitService {
     required List<int> reminderDays,
     String? reminderTime,
     int sortOrder = 0,
+    String? categoryId,
   }) {
     if (name.trim().isEmpty) throw ArgumentError('Habit name cannot be empty.');
     return Habit()
@@ -28,7 +29,8 @@ class HabitService {
       ..reminderTime = reminderTime
       ..createdAt = DateTime.now().toUtc()
       ..isArchived = false
-      ..sortOrder = sortOrder;
+      ..sortOrder = sortOrder
+      ..categoryId = categoryId;
   }
 
   /// Updates fields on an existing habit in place.
@@ -40,6 +42,7 @@ class HabitService {
     List<int>? reminderDays,
     Object? reminderTime = _sentinel,
     int? sortOrder,
+    Object? categoryId = _sentinel,
   }) {
     if (name != null) {
       if (name.trim().isEmpty) throw ArgumentError('Habit name cannot be empty.');
@@ -52,6 +55,9 @@ class HabitService {
       habit.reminderTime = reminderTime as String?;
     }
     if (sortOrder != null) habit.sortOrder = sortOrder;
+    if (!identical(categoryId, _sentinel)) {
+      habit.categoryId = categoryId as String?;
+    }
   }
 
   static const _sentinel = Object();

@@ -21,13 +21,16 @@ class ProofEntryAdapter extends TypeAdapter<ProofEntry> {
       ..habitId = fields[1] as String
       ..imagePath = fields[2] as String
       ..note = fields[3] as String?
-      ..completedAt = fields[4] as DateTime;
+      ..completedAt = fields[4] as DateTime
+      // fields[5] absent on old entries → default 'image' for backward compat
+      ..mediaType = (fields[5] as String?) ?? 'image'
+      ..videoDurationMs = fields[6] as int?;
   }
 
   @override
   void write(BinaryWriter writer, ProofEntry obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -37,7 +40,11 @@ class ProofEntryAdapter extends TypeAdapter<ProofEntry> {
       ..writeByte(3)
       ..write(obj.note)
       ..writeByte(4)
-      ..write(obj.completedAt);
+      ..write(obj.completedAt)
+      ..writeByte(5)
+      ..write(obj.mediaType)
+      ..writeByte(6)
+      ..write(obj.videoDurationMs);
   }
 
   @override

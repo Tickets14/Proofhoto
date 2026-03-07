@@ -84,6 +84,7 @@ class HabitController extends StateNotifier<List<Habit>> {
     required int colorValue,
     required List<int> reminderDays,
     String? reminderTime,
+    String? categoryId,
   }) async {
     final habit = HabitService.createNew(
       name: name,
@@ -92,6 +93,7 @@ class HabitController extends StateNotifier<List<Habit>> {
       reminderDays: reminderDays,
       reminderTime: reminderTime,
       sortOrder: state.length,
+      categoryId: categoryId,
     );
     await _repo.save(habit);
     _load();
@@ -106,6 +108,7 @@ class HabitController extends StateNotifier<List<Habit>> {
     List<int>? reminderDays,
     Object? reminderTime = const _Unset(),
     int? sortOrder,
+    Object? categoryId = const _Unset(),
   }) async {
     HabitService.update(
       habit,
@@ -115,6 +118,7 @@ class HabitController extends StateNotifier<List<Habit>> {
       reminderDays: reminderDays,
       reminderTime: reminderTime is _Unset ? const Object() : reminderTime as String?,
       sortOrder: sortOrder,
+      categoryId: categoryId is _Unset ? const Object() : categoryId as String?,
     );
     await _repo.save(habit);
     _load();

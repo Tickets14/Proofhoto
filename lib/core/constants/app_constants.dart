@@ -4,11 +4,15 @@ abstract final class AppConstants {
   static const proofEntriesBox = 'proofEntries';
   static const settingsBox = 'settings';
   static const settingsKey = 'userSettings';
+  static const categoriesBox = 'categories';
 
   // Image settings
   static const imageMaxWidth = 1080;
   static const imageQuality = 80;
   static const proofDir = 'proof';
+
+  // Video settings
+  static const videoMaxSeconds = 15;
 
   // Habit limits
   static const habitNameMaxLength = 40;

@@ -36,6 +36,10 @@ class Habit extends HiveObject {
   @HiveField(8)
   late int sortOrder;
 
+  /// Optional category id. Null means uncategorized.
+  @HiveField(9)
+  String? categoryId;
+
   /// Whether this habit is scheduled for the given [weekday] (1=Mon…7=Sun).
   bool isScheduledOn(int weekday) => reminderDays.contains(weekday);
 }

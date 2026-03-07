@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../data/models/proof_entry.dart';
 import '../../../../core/utils/image_utils.dart';
+import '../../../../core/utils/video_utils.dart';
 import '../../../../core/utils/app_date_utils.dart';
 
 class ProofThumbnail extends StatefulWidget {
@@ -38,7 +39,12 @@ class _ProofThumbnailState extends State<ProofThumbnail> {
   }
 
   Future<void> _load() async {
-    final f = await ImageUtils.fileFromRelativePath(widget.entry.imagePath);
+    final File? f;
+    if (widget.entry.isVideo) {
+      f = await VideoUtils.thumbnailFile(widget.entry.imagePath);
+    } else {
+      f = await ImageUtils.fileFromRelativePath(widget.entry.imagePath);
+    }
     if (mounted) setState(() => _file = f);
   }
 
@@ -54,7 +60,7 @@ class _ProofThumbnailState extends State<ProofThumbnail> {
             width: widget.size,
             height: widget.size,
             child: _file == null
-                ? const _Placeholder()
+                ? _Placeholder(isVideo: widget.entry.isVideo)
                 : Stack(
                     fit: StackFit.expand,
                     children: [
@@ -63,22 +69,22 @@ class _ProofThumbnailState extends State<ProofThumbnail> {
                         fit: BoxFit.cover,
                         cacheWidth: (widget.size * 2).toInt(),
                       ),
-                      if (widget.showDateOverlay)
+
+                      // Date overlay for images
+                      if (widget.showDateOverlay && !widget.entry.isVideo)
                         Positioned(
                           bottom: 0,
                           left: 0,
                           right: 0,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
+                                horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 begin: Alignment.bottomCenter,
                                 end: Alignment.topCenter,
                                 colors: [
-                                  Colors.black.withOpacity(0.65),
+                                  Colors.black.withValues(alpha: 0.65),
                                   Colors.transparent,
                                 ],
                               ),
@@ -95,6 +101,15 @@ class _ProofThumbnailState extends State<ProofThumbnail> {
                             ),
                           ),
                         ),
+
+                      // Play badge for videos
+                      if (widget.entry.isVideo)
+                        Positioned(
+                          bottom: 4,
+                          right: 4,
+                          child: _VideoBadge(
+                              duration: widget.entry.formattedDuration),
+                        ),
                     ],
                   ),
           ),
@@ -104,14 +119,51 @@ class _ProofThumbnailState extends State<ProofThumbnail> {
   }
 }
 
+class _VideoBadge extends StatelessWidget {
+  const _VideoBadge({required this.duration});
+  final String duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.play_arrow, color: Colors.white, size: 10),
+          if (duration.isNotEmpty) ...[
+            const SizedBox(width: 2),
+            Text(
+              duration,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _Placeholder extends StatelessWidget {
-  const _Placeholder();
+  const _Placeholder({required this.isVideo});
+  final bool isVideo;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: const Icon(Icons.image_outlined, color: Colors.grey),
+      child: Icon(
+        isVideo ? Icons.videocam_outlined : Icons.image_outlined,
+        color: Colors.grey,
+      ),
     );
   }
 }

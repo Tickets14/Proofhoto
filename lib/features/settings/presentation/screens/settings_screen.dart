@@ -8,6 +8,7 @@ import '../../../proof/presentation/controllers/proof_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
+import '../../../../features/categories/presentation/screens/manage_categories_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -121,6 +122,25 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     ],
                   ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // ── Habits ────────────────────────────────────────────────────
+          _SectionHeader('Habits'),
+          _SettingsCard(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: const Text('Manage Categories'),
+                subtitle: const Text('Organize habits into groups'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ManageCategoriesScreen(),
+                  ),
                 ),
               ),
             ],

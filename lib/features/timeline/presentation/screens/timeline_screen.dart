@@ -8,6 +8,7 @@ import '../../../habits/presentation/controllers/habit_controller.dart';
 import '../../../../features/habits/presentation/widgets/empty_state.dart';
 import '../../../../core/utils/app_date_utils.dart';
 import '../../../../core/utils/image_utils.dart';
+import '../../../../core/utils/video_utils.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/constants/app_constants.dart';
 
@@ -149,7 +150,12 @@ class _TimelineEntryState extends State<_TimelineEntry> {
   }
 
   Future<void> _load() async {
-    final f = await ImageUtils.fileFromRelativePath(widget.entry.imagePath);
+    final File? f;
+    if (widget.entry.isVideo) {
+      f = await VideoUtils.thumbnailFile(widget.entry.imagePath);
+    } else {
+      f = await ImageUtils.fileFromRelativePath(widget.entry.imagePath);
+    }
     if (mounted) setState(() => _file = f);
   }
 
@@ -188,22 +194,62 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                     topLeft: Radius.circular(AppConstants.cardRadius),
                     bottomLeft: Radius.circular(AppConstants.cardRadius),
                   ),
-                  child: _file != null
-                      ? Image.file(
-                          _file!,
-                          width: 88,
-                          height: 88,
-                          fit: BoxFit.cover,
-                          cacheWidth: 176,
-                        )
-                      : ColoredBox(
-                          color: colorScheme.surfaceContainerHighest,
-                          child: const SizedBox(
-                            width: 88,
-                            height: 88,
-                            child: Icon(Icons.image_outlined, color: Colors.grey),
+                  child: SizedBox(
+                    width: 88,
+                    height: 88,
+                    child: _file != null
+                        ? Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(
+                                _file!,
+                                fit: BoxFit.cover,
+                                cacheWidth: 176,
+                              ),
+                              if (widget.entry.isVideo)
+                                Positioned(
+                                  bottom: 4,
+                                  right: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.65),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.play_arrow,
+                                            color: Colors.white, size: 10),
+                                        if (widget.entry.formattedDuration
+                                            .isNotEmpty) ...[
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            widget.entry.formattedDuration,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          )
+                        : ColoredBox(
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Icon(
+                              widget.entry.isVideo
+                                  ? Icons.videocam_outlined
+                                  : Icons.image_outlined,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ),
               // Details
@@ -245,12 +291,31 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      // Time
-                      Text(
-                        AppDateUtils.formatTime(widget.entry.completedAt),
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+                      // Time + optional duration for videos
+                      Row(
+                        children: [
+                          Text(
+                            AppDateUtils.formatTime(widget.entry.completedAt),
+                            style:
+                                Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                          ),
+                          if (widget.entry.isVideo &&
+                              widget.entry.formattedDuration.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.videocam_outlined,
+                                size: 12, color: Colors.grey),
+                            const SizedBox(width: 2),
+                            Text(
+                              widget.entry.formattedDuration,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: colorScheme.onSurfaceVariant),
                             ),
+                          ],
+                        ],
                       ),
                       // Note preview
                       if (widget.entry.note != null &&

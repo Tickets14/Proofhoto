@@ -87,6 +87,21 @@ class ProofController extends StateNotifier<List<ProofEntry>> {
     return entry;
   }
 
+  Future<ProofEntry> addVideoProof({
+    required String sourcePath,
+    required String habitId,
+    String? note,
+  }) async {
+    final entry = await ProofService.createVideoEntry(
+      sourcePath: sourcePath,
+      habitId: habitId,
+      note: note,
+    );
+    await _repo.save(entry);
+    _load();
+    return entry;
+  }
+
   Future<void> deleteEntry(ProofEntry entry) async {
     await ProofService.deleteEntry(entry);
     await _repo.delete(entry.id);

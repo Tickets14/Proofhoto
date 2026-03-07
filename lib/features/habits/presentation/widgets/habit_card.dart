@@ -7,6 +7,7 @@ import '../../../proof/data/models/proof_entry.dart';
 import '../../../proof/presentation/controllers/proof_controller.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/image_utils.dart';
+import '../../../../core/utils/video_utils.dart';
 import '../../../../core/router/app_router.dart';
 
 class HabitCard extends ConsumerWidget {
@@ -248,7 +249,11 @@ class _RightWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (isCompleted && proofEntry != null) {
-      return _ProofThumbnail(imagePath: proofEntry!.imagePath, proofId: proofEntry!.id);
+      return _ProofThumbnail(
+        imagePath: proofEntry!.imagePath,
+        proofId: proofEntry!.id,
+        isVideo: proofEntry!.isVideo,
+      );
     }
 
     if (isFrozen) {
@@ -274,9 +279,14 @@ class _RightWidget extends ConsumerWidget {
 }
 
 class _ProofThumbnail extends StatefulWidget {
-  const _ProofThumbnail({required this.imagePath, required this.proofId});
+  const _ProofThumbnail({
+    required this.imagePath,
+    required this.proofId,
+    required this.isVideo,
+  });
   final String imagePath;
   final String proofId;
+  final bool isVideo;
 
   @override
   State<_ProofThumbnail> createState() => _ProofThumbnailState();
@@ -292,7 +302,12 @@ class _ProofThumbnailState extends State<_ProofThumbnail> {
   }
 
   Future<void> _loadFile() async {
-    final f = await ImageUtils.fileFromRelativePath(widget.imagePath);
+    final File? f;
+    if (widget.isVideo) {
+      f = await VideoUtils.thumbnailFile(widget.imagePath);
+    } else {
+      f = await ImageUtils.fileFromRelativePath(widget.imagePath);
+    }
     if (mounted) setState(() => _file = f);
   }
 
@@ -303,7 +318,7 @@ class _ProofThumbnailState extends State<_ProofThumbnail> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: AppColors.success.withOpacity(0.1),
+          color: AppColors.success.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Icon(Icons.check_circle, color: AppColors.success, size: 22),
@@ -314,12 +329,28 @@ class _ProofThumbnailState extends State<_ProofThumbnail> {
       tag: 'proof_${widget.proofId}',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.file(
-          _file!,
-          width: 44,
-          height: 44,
-          fit: BoxFit.cover,
-          cacheWidth: 88,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Image.file(
+              _file!,
+              width: 44,
+              height: 44,
+              fit: BoxFit.cover,
+              cacheWidth: 88,
+            ),
+            if (widget.isVideo)
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.play_arrow,
+                    color: Colors.white, size: 12),
+              ),
+          ],
         ),
       ),
     );

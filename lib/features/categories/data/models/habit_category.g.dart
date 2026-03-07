@@ -1,38 +1,33 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'habit.dart';
+part of 'habit_category.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class HabitAdapter extends TypeAdapter<Habit> {
+class HabitCategoryAdapter extends TypeAdapter<HabitCategory> {
   @override
-  final int typeId = 0;
+  final int typeId = 3;
 
   @override
-  Habit read(BinaryReader reader) {
+  HabitCategory read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Habit()
+    return HabitCategory()
       ..id = fields[0] as String
       ..name = fields[1] as String
       ..emoji = fields[2] as String
       ..colorValue = fields[3] as int
-      ..reminderDays = (fields[4] as List).cast<int>()
-      ..reminderTime = fields[5] as String?
-      ..createdAt = fields[6] as DateTime
-      ..isArchived = fields[7] as bool
-      ..sortOrder = fields[8] as int
-      ..categoryId = fields[9] as String?;
+      ..sortOrder = fields[4] as int;
   }
 
   @override
-  void write(BinaryWriter writer, Habit obj) {
+  void write(BinaryWriter writer, HabitCategory obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -42,17 +37,7 @@ class HabitAdapter extends TypeAdapter<Habit> {
       ..writeByte(3)
       ..write(obj.colorValue)
       ..writeByte(4)
-      ..write(obj.reminderDays)
-      ..writeByte(5)
-      ..write(obj.reminderTime)
-      ..writeByte(6)
-      ..write(obj.createdAt)
-      ..writeByte(7)
-      ..write(obj.isArchived)
-      ..writeByte(8)
-      ..write(obj.sortOrder)
-      ..writeByte(9)
-      ..write(obj.categoryId);
+      ..write(obj.sortOrder);
   }
 
   @override
@@ -61,7 +46,7 @@ class HabitAdapter extends TypeAdapter<Habit> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is HabitAdapter &&
+      other is HabitCategoryAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
