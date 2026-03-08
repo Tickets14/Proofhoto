@@ -6,7 +6,6 @@ import '../../../../core/utils/image_utils.dart';
 import '../../../../core/utils/video_utils.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/theme/app_colors.dart';
 
 class WeeklyReviewSheet extends StatelessWidget {
   const WeeklyReviewSheet({
@@ -141,12 +140,13 @@ class _BigStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final pct = review.completionPct;
     final color = pct >= 80
-        ? AppColors.success
+        ? cs.tertiary
         : pct >= 50
-            ? AppColors.primary
-            : Theme.of(context).colorScheme.onSurfaceVariant;
+            ? cs.primary
+            : cs.onSurfaceVariant;
 
     return Container(
       width: double.infinity,
@@ -302,7 +302,7 @@ class _StatTile extends StatelessWidget {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.w600,
                   ),
               textAlign: TextAlign.center,
@@ -577,12 +577,13 @@ class _MotivationalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final pct = review.completionPct;
     final color = pct >= 80
-        ? AppColors.success
+        ? cs.tertiary
         : pct >= 50
-            ? AppColors.primary
-            : Theme.of(context).colorScheme.onSurfaceVariant;
+            ? cs.primary
+            : cs.onSurfaceVariant;
 
     return Container(
       width: double.infinity,

@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../habits/presentation/controllers/habit_controller.dart';
 import '../../../proof/presentation/controllers/proof_controller.dart';
 import '../controllers/settings_controller.dart';
-import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../../../features/categories/presentation/screens/manage_categories_screen.dart';
 
@@ -15,6 +15,7 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final responsive = ResponsiveSpec.of(context);
     final settings = ref.watch(settingsProvider);
     final ctrl = ref.read(settingsProvider.notifier);
     final todayHabits = ref.watch(todayHabitsProvider);
@@ -28,9 +29,9 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
-          AppConstants.screenPadding,
+          responsive.horizontalPadding,
           16,
-          AppConstants.screenPadding,
+          responsive.horizontalPadding,
           MediaQuery.of(context).padding.bottom + 32,
         ),
         children: [
@@ -38,12 +39,14 @@ class SettingsScreen extends ConsumerWidget {
           _SectionHeader('Appearance'),
           _SettingsCard(
             children: [
-              ListTile(
-                leading: const Icon(Icons.brightness_6_outlined),
-                title: const Text('Theme'),
-                trailing: DropdownButton<String>(
+              Padding(
+                padding: EdgeInsets.all(responsive.isCompact ? 12 : 16),
+                child: DropdownButtonFormField<String>(
                   value: settings.themeMode,
-                  underline: const SizedBox.shrink(),
+                  decoration: const InputDecoration(
+                    labelText: 'Theme',
+                    prefixIcon: Icon(Icons.brightness_6_outlined),
+                  ),
                   items: const [
                     DropdownMenuItem(value: 'system', child: Text('System')),
                     DropdownMenuItem(value: 'light', child: Text('Light')),
@@ -85,23 +88,27 @@ class SettingsScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        const Text('❄️',
-                            style: TextStyle(fontSize: 32)),
+                        Text(
+                          '❄️',
+                          style: TextStyle(
+                            fontSize: responsive.isCompact ? 28 : 32,
+                          ),
+                        ),
                         const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${settings.streakFreezeCount} freeze${settings.streakFreezeCount == 1 ? '' : 's'} available',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium,
-                            ),
-                            Text(
-                              'Earn 1 per 7-day streak milestone',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${settings.streakFreezeCount} freeze${settings.streakFreezeCount == 1 ? '' : 's'} available',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              Text(
+                                'Earn 1 per 7-day streak milestone',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -167,8 +174,7 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: Text(
                     settings.focusModeStartTime ?? '06:00',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                   onTap: () async {
@@ -195,8 +201,7 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: Text(
                     settings.focusModeEndTime ?? '12:00',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                   onTap: () async {
@@ -234,11 +239,13 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const Divider(height: 1, indent: 56),
               ListTile(
-                leading: const Icon(Icons.delete_forever_outlined,
-                    color: Colors.red),
-                title: const Text('Delete all data',
-                    style: TextStyle(color: Colors.red)),
-                subtitle: const Text('Permanently removes all habits and proof'),
+                leading: Icon(Icons.delete_forever_outlined,
+                    color: Theme.of(context).colorScheme.error),
+                title: Text('Delete all data',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.error)),
+                subtitle:
+                    const Text('Permanently removes all habits and proof'),
                 onTap: () => _deleteAll(context, ref),
               ),
             ],
@@ -249,11 +256,14 @@ class SettingsScreen extends ConsumerWidget {
           _SectionHeader('About'),
           _SettingsCard(
             children: [
-              const ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text('Version'),
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('Version'),
                 trailing: Text('1.0.0',
-                    style: TextStyle(color: Colors.grey)),
+                    style: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant)),
               ),
               const Divider(height: 1, indent: 56),
               const ListTile(
@@ -275,21 +285,25 @@ class SettingsScreen extends ConsumerWidget {
 
       final data = {
         'exportedAt': DateTime.now().toIso8601String(),
-        'habits': habits.map((h) => {
-          'id': h.id,
-          'name': h.name,
-          'emoji': h.emoji,
-          'reminderDays': h.reminderDays,
-          'reminderTime': h.reminderTime,
-          'createdAt': h.createdAt.toIso8601String(),
-        }).toList(),
-        'proofEntries': entries.map((e) => {
-          'id': e.id,
-          'habitId': e.habitId,
-          'imagePath': e.imagePath,
-          'note': e.note,
-          'completedAt': e.completedAt.toIso8601String(),
-        }).toList(),
+        'habits': habits
+            .map((h) => {
+                  'id': h.id,
+                  'name': h.name,
+                  'emoji': h.emoji,
+                  'reminderDays': h.reminderDays,
+                  'reminderTime': h.reminderTime,
+                  'createdAt': h.createdAt.toIso8601String(),
+                })
+            .toList(),
+        'proofEntries': entries
+            .map((e) => {
+                  'id': e.id,
+                  'habitId': e.habitId,
+                  'imagePath': e.imagePath,
+                  'note': e.note,
+                  'completedAt': e.completedAt.toIso8601String(),
+                })
+            .toList(),
       };
 
       // Use external storage on Android so the file lands in a user-visible location;
@@ -303,7 +317,8 @@ class SettingsScreen extends ConsumerWidget {
       final filename =
           'proof_export_${DateTime.now().millisecondsSinceEpoch}.json';
       final file = File('${dir.path}/$filename');
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+      await file
+          .writeAsString(const JsonEncoder.withIndent('  ').convert(data));
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -318,7 +333,7 @@ class SettingsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export failed: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -337,7 +352,8 @@ class SettingsScreen extends ConsumerWidget {
     final second = await showConfirmDialog(
       context,
       title: 'Are you absolutely sure?',
-      message: 'All ${ref.read(habitsProvider).length} habits and all proof photos will be gone forever.',
+      message:
+          'All ${ref.read(habitsProvider).length} habits and all proof photos will be gone forever.',
       confirmLabel: 'Yes, delete everything',
     );
     if (!second || !context.mounted) return;
@@ -361,13 +377,15 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              letterSpacing: 1.2,
+              color: cs.primary,
+              letterSpacing: 1.0,
+              fontWeight: FontWeight.w600,
             ),
       ),
     );
@@ -380,18 +398,7 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
     );

@@ -23,6 +23,7 @@ import '../../../habits/presentation/widgets/daily_progress_ring.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/app_date_utils.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/responsive_utils.dart';
 import '../../../../features/habits/presentation/widgets/empty_state.dart';
 
 class StatsScreen extends ConsumerStatefulWidget {
@@ -51,6 +52,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final responsive = ResponsiveSpec.of(context);
     final habits = ref.watch(habitsProvider);
     final allEntries = ref.watch(allProofProvider);
     final settings = ref.watch(settingsProvider);
@@ -73,38 +75,53 @@ class _StatsScreenState extends ConsumerState<StatsScreen>
       appBar: AppBar(
         title: const Text('Statistics'),
         actions: [
-          TextButton.icon(
-            icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('Week Review'),
-            onPressed: () => showWeeklyReview(context, ref),
-          ),
-          const SizedBox(width: 4),
+          if (responsive.isCompact)
+            IconButton(
+              icon: const Icon(Icons.auto_awesome_outlined),
+              tooltip: 'Week Review',
+              onPressed: () => showWeeklyReview(context, ref),
+            )
+          else ...[
+            TextButton.icon(
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('Week Review'),
+              onPressed: () => showWeeklyReview(context, ref),
+            ),
+            const SizedBox(width: 4),
+          ],
         ],
         bottom: TabBar(
           controller: _tabCtrl,
+          isScrollable: responsive.isCompact,
           tabs: const [Tab(text: 'Overview'), Tab(text: 'Per Habit')],
         ),
       ),
-      body: TabBarView(
-        controller: _tabCtrl,
-        children: [
-          _OverviewTab(
-            habits: habits,
-            allEntries: allEntries,
-            settings: settings,
-            categories: categories,
-            achievements: achievements,
-            now: now,
-          ),
-          _PerHabitTab(
-            habits: habits,
-            allEntries: allEntries,
-            settings: settings,
-            categories: categories,
-            selectedHabitId: _selectedHabitId ?? habits.first.id,
-            onHabitChanged: (id) => setState(() => _selectedHabitId = id),
-          ),
-        ],
+      body: ResponsiveBody(
+        child: TabBarView(
+          controller: _tabCtrl,
+          children: [
+            _OverviewTab(
+              habits: habits,
+              allEntries: allEntries,
+              settings: settings,
+              categories: categories,
+              achievements: achievements,
+              now: now,
+              horizontalPadding: responsive.horizontalPadding,
+              isCompact: responsive.isCompact,
+            ),
+            _PerHabitTab(
+              habits: habits,
+              allEntries: allEntries,
+              settings: settings,
+              categories: categories,
+              selectedHabitId: _selectedHabitId ?? habits.first.id,
+              onHabitChanged: (id) => setState(() => _selectedHabitId = id),
+              horizontalPadding: responsive.horizontalPadding,
+              isCompact: responsive.isCompact,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -120,6 +137,8 @@ class _OverviewTab extends StatelessWidget {
     required this.categories,
     required this.achievements,
     required this.now,
+    required this.horizontalPadding,
+    required this.isCompact,
   });
 
   final List<Habit> habits;
@@ -128,6 +147,8 @@ class _OverviewTab extends StatelessWidget {
   final List<HabitCategory> categories;
   final List<Achievement> achievements;
   final DateTime now;
+  final double horizontalPadding;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +163,9 @@ class _OverviewTab extends StatelessWidget {
     for (final h in habits) {
       final entries = allEntries.where((e) => e.habitId == h.id).toList();
       final current = StatsService.currentStreak(
-        h, entries, settings.usedFreezes,
+        h,
+        entries,
+        settings.usedFreezes,
         availableFreezes: settings.streakFreezeCount,
       );
       final best = StatsService.bestStreak(h, entries);
@@ -161,19 +184,20 @@ class _OverviewTab extends StatelessWidget {
     final scheduledToday =
         habits.where((h) => h.isScheduledOn(now.weekday)).length;
     final completedToday = completedHabitIds.length;
+    final sectionGap = isCompact ? 12.0 : 16.0;
 
     return ListView(
-      padding: const EdgeInsets.all(AppConstants.screenPadding),
+      padding: EdgeInsets.all(horizontalPadding),
       children: [
         StreakCard(
           currentStreak: bestCurrentStreak,
           bestStreak: bestAllTimeStreak,
         ),
         if (achievements.isNotEmpty) ...[
-          const SizedBox(height: 16),
+          SizedBox(height: sectionGap),
           _RecentAchievements(achievements: achievements),
         ],
-        const SizedBox(height: 16),
+        SizedBox(height: sectionGap),
         _SectionCard(
           title: "Today's Score",
           child: _TodayScoreRow(
@@ -181,7 +205,7 @@ class _OverviewTab extends StatelessWidget {
             total: scheduledToday,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: sectionGap),
         _SectionCard(
           title: 'Last 7 Days',
           child: WeeklyBarChart(
@@ -189,7 +213,7 @@ class _OverviewTab extends StatelessWidget {
             maxHabits: habits.length,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: sectionGap),
         _SectionCard(
           title: 'Monthly Heatmap',
           child: MonthlyHeatmap(
@@ -200,7 +224,7 @@ class _OverviewTab extends StatelessWidget {
           ),
         ),
         if (categories.isNotEmpty) ...[
-          const SizedBox(height: 16),
+          SizedBox(height: sectionGap),
           _SectionCard(
             title: 'By Category',
             child: _CategoryBreakdown(
@@ -210,7 +234,7 @@ class _OverviewTab extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 80),
+        SizedBox(height: isCompact ? 72 : 80),
       ],
     );
   }
@@ -223,6 +247,8 @@ class _OverviewTab extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -245,6 +271,8 @@ class _PerHabitTab extends StatelessWidget {
     required this.categories,
     required this.selectedHabitId,
     required this.onHabitChanged,
+    required this.horizontalPadding,
+    required this.isCompact,
   });
 
   final List<Habit> habits;
@@ -253,6 +281,8 @@ class _PerHabitTab extends StatelessWidget {
   final List<HabitCategory> categories;
   final String selectedHabitId;
   final ValueChanged<String> onHabitChanged;
+  final double horizontalPadding;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -265,16 +295,19 @@ class _PerHabitTab extends StatelessWidget {
         ? categories.where((c) => c.id == habit.categoryId).firstOrNull
         : null;
     final currentStreak = StatsService.currentStreak(
-      habit, entries, settings.usedFreezes,
+      habit,
+      entries,
+      settings.usedFreezes,
       availableFreezes: settings.streakFreezeCount,
     );
     final bestStreak = StatsService.bestStreak(habit, entries);
     final weeklyRates = StatsService.weeklyRates(habit, entries);
     final bestDay = StatsService.bestDayOfWeek(habit, entries);
     final recentEntries = entries.take(6).toList();
+    final sectionGap = isCompact ? 12.0 : 16.0;
 
     return ListView(
-      padding: const EdgeInsets.all(AppConstants.screenPadding),
+      padding: EdgeInsets.all(horizontalPadding),
       children: [
         // Habit selector dropdown
         DropdownButtonFormField<String>(
@@ -303,8 +336,7 @@ class _PerHabitTab extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(category.emoji,
-                      style: const TextStyle(fontSize: 14)),
+                  Text(category.emoji, style: const TextStyle(fontSize: 14)),
                   const SizedBox(width: 6),
                   Text(
                     category.name,
@@ -319,7 +351,7 @@ class _PerHabitTab extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(height: 20),
+        SizedBox(height: isCompact ? 16 : 20),
 
         // Streak card
         StreakCard(
@@ -327,7 +359,7 @@ class _PerHabitTab extends StatelessWidget {
           bestStreak: bestStreak,
           habitName: habit.name,
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: sectionGap),
 
         // Completion rate line chart
         if (weeklyRates.isNotEmpty)
@@ -336,7 +368,7 @@ class _PerHabitTab extends StatelessWidget {
             subtitle: 'Last 12 weeks',
             child: CompletionRateChart(weeklyRates: weeklyRates),
           ),
-        const SizedBox(height: 16),
+        SizedBox(height: sectionGap),
 
         // Best day of week
         if (bestDay != null)
@@ -345,23 +377,27 @@ class _PerHabitTab extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: isCompact ? 44 : 48,
+                  height: isCompact ? 44 : 48,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     AppConstants.dayLabels[bestDay - 1],
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onPrimaryContainer,
                       fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                      fontSize: isCompact ? 13 : 14,
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: isCompact ? 10 : 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,7 +409,7 @@ class _PerHabitTab extends StatelessWidget {
                             .titleMedium
                             ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: isCompact ? 1 : 2),
                       Text(
                         "You're most consistent on this day",
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -388,7 +424,7 @@ class _PerHabitTab extends StatelessWidget {
               ],
             ),
           ),
-        const SizedBox(height: 16),
+        SizedBox(height: sectionGap),
 
         // 6-photo collage
         if (recentEntries.isNotEmpty)
@@ -397,11 +433,11 @@ class _PerHabitTab extends StatelessWidget {
             subtitle: 'Latest ${recentEntries.length} photos',
             child: ProofTimeline(
               entries: recentEntries,
-              crossAxisCount: 3,
+              crossAxisCount: isCompact ? 2 : 3,
               spacing: 6,
             ),
           ),
-        const SizedBox(height: 80),
+        SizedBox(height: isCompact ? 72 : 80),
       ],
     );
   }
@@ -422,106 +458,113 @@ class _DayDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).padding.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  AppDateUtils.friendlyDate(date),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: entries.isEmpty
-                      ? Theme.of(context).colorScheme.surfaceContainerHighest
-                      : AppColors.success.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${entries.length} done',
-                  style: TextStyle(
-                    color: entries.isEmpty
-                        ? Theme.of(context).colorScheme.onSurfaceVariant
-                        : AppColors.success,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+    final responsive = ResponsiveSpec.of(context);
+    final compact = responsive.isCompact;
 
-          // List
-          if (entries.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Text(
-                  'No habits completed on this day.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
-              ),
-            )
-          else
-            ...entries.map((e) {
-              final habit = habitMap[e.habitId];
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: habit != null
-                        ? Color(habit.colorValue).withValues(alpha: 0.12)
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          responsive.horizontalPadding,
+          20,
+          responsive.horizontalPadding,
+          MediaQuery.of(context).padding.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Expanded(
                   child: Text(
-                    habit?.emoji ?? '❓',
-                    style: const TextStyle(fontSize: 20),
+                    AppDateUtils.friendlyDate(date),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
-                title: Text(
-                  habit?.name ?? 'Deleted habit',
-                  style: Theme.of(context).textTheme.titleSmall,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: entries.isEmpty
+                        ? Theme.of(context).colorScheme.surfaceContainerHighest
+                        : AppColors.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${entries.length} done',
+                    style: TextStyle(
+                      color: entries.isEmpty
+                          ? Theme.of(context).colorScheme.onSurfaceVariant
+                          : AppColors.success,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
-                subtitle: Text(
-                  AppDateUtils.formatTime(e.completedAt),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // List
+            if (entries.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Text(
+                    'No habits completed on this day.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
                 ),
-                trailing: e.note != null && e.note!.isNotEmpty
-                    ? Icon(
-                        Icons.note_outlined,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      )
-                    : null,
-              );
-            }),
-        ],
+              )
+            else
+              ...entries.map((e) {
+                final habit = habitMap[e.habitId];
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: compact ? 36 : 40,
+                    height: compact ? 36 : 40,
+                    decoration: BoxDecoration(
+                      color: habit != null
+                          ? Color(habit.colorValue).withValues(alpha: 0.12)
+                          : Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      habit?.emoji ?? '❓',
+                      style: TextStyle(fontSize: compact ? 18 : 20),
+                    ),
+                  ),
+                  title: Text(
+                    habit?.name ?? 'Deleted habit',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  subtitle: Text(
+                    AppDateUtils.formatTime(e.completedAt),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  trailing: e.note != null && e.note!.isNotEmpty
+                      ? Icon(
+                          Icons.note_outlined,
+                          size: compact ? 14 : 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        )
+                      : null,
+                );
+              }),
+          ],
+        ),
       ),
     );
   }
@@ -540,40 +583,62 @@ class _TodayScoreRow extends StatelessWidget {
     final allDone = total > 0 && completed >= total;
     final remaining = total - completed;
 
-    return Row(
-      children: [
-        DailyProgressRing(
-          completed: completed,
-          total: total,
-          size: 80,
-          strokeWidth: 8,
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 320;
+
+        final summary = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              total == 0 ? 'Rest day' : '$completed of $total',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            SizedBox(height: compact ? 2 : 3),
+            Text(
+              total == 0
+                  ? 'No habits scheduled today'
+                  : allDone
+                      ? '🎉 All habits completed!'
+                      : '$remaining habit${remaining == 1 ? '' : 's'} remaining',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        );
+
+        if (compact) {
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                total == 0 ? 'Rest day' : '$completed of $total',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+              DailyProgressRing(
+                completed: completed,
+                total: total,
+                size: 68,
+                strokeWidth: 7,
               ),
-              const SizedBox(height: 3),
-              Text(
-                total == 0
-                    ? 'No habits scheduled today'
-                    : allDone
-                        ? '🎉 All habits completed!'
-                        : '$remaining habit${remaining == 1 ? '' : 's'} remaining',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
+              const SizedBox(height: 10),
+              summary,
             ],
-          ),
-        ),
-      ],
+          );
+        }
+
+        return Row(
+          children: [
+            DailyProgressRing(
+              completed: completed,
+              total: total,
+              size: 80,
+              strokeWidth: 8,
+            ),
+            const SizedBox(width: 20),
+            Expanded(child: summary),
+          ],
+        );
+      },
     );
   }
 }
@@ -586,8 +651,48 @@ class _RecentAchievements extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final responsive = ResponsiveSpec.of(context);
+    final compact = responsive.isCompact;
     // Last 3 unlocked, newest first
     final recent = achievements.take(3).toList();
+
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: recent.map((a) {
+              final badge = badgeById(a.id);
+              return Tooltip(
+                message: badge?.name ?? a.id,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.amber.withValues(alpha: 0.12),
+                    border:
+                        Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    badge?.emoji ?? '🏅',
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 6),
+          TextButton(
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.badges),
+            child: const Text('See all →'),
+          ),
+        ],
+      );
+    }
 
     return Row(
       children: [
@@ -618,8 +723,7 @@ class _RecentAchievements extends StatelessWidget {
           ),
         ),
         TextButton(
-          onPressed: () =>
-              Navigator.of(context).pushNamed(AppRoutes.badges),
+          onPressed: () => Navigator.of(context).pushNamed(AppRoutes.badges),
           child: const Text('See all →'),
         ),
       ],
@@ -676,7 +780,7 @@ class _CategoryBreakdown extends StatelessWidget {
         label: 'Uncategorized',
         emoji: '🗂️',
         count: uncategorized,
-        color: Colors.grey,
+        color: Theme.of(context).colorScheme.outline,
       ));
     }
     rows.sort((a, b) => b.count.compareTo(a.count));
@@ -737,24 +841,24 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final responsive = ResponsiveSpec.of(context);
+    final compact = responsive.isCompact;
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(compact ? 12 : 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        // M3: surfaceContainerLow for a subtle card that reads as elevated
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(compact ? 10 : 12),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
             children: [
               Text(
                 title,
@@ -768,13 +872,13 @@ class _SectionCard extends StatelessWidget {
                 Text(
                   subtitle!,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        color: cs.onSurfaceVariant,
                       ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: compact ? 10 : 12),
           child,
         ],
       ),

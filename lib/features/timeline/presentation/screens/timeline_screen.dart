@@ -11,12 +11,14 @@ import '../../../../core/utils/image_utils.dart';
 import '../../../../core/utils/video_utils.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/responsive_utils.dart';
 
 class TimelineScreen extends ConsumerWidget {
   const TimelineScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final responsive = ResponsiveSpec.of(context);
     final allEntries = ref.watch(allProofProvider);
     final allHabits = ref.watch(habitsProvider);
 
@@ -37,30 +39,46 @@ class TimelineScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Timeline')),
-      body: CustomScrollView(
-        slivers: [
-          for (final date in dates) ...[
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _DateHeaderDelegate(
-                label: AppDateUtils.friendlyDate(date),
+      body: ResponsiveBody(
+        child: CustomScrollView(
+          slivers: [
+            for (final date in dates) ...[
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _DateHeaderDelegate(
+                  label: AppDateUtils.friendlyDate(date),
+                  horizontalPadding: responsive.horizontalPadding,
+                  height: responsive.value(
+                    compact: 40,
+                    regular: 44,
+                    largePhone: 48,
+                  ),
+                ),
               ),
-            ),
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) {
-                  final entry = grouped[date]![i];
-                  return _TimelineEntry(
-                    entry: entry,
-                    habit: habitMap[entry.habitId],
-                  );
-                },
-                childCount: grouped[date]!.length,
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, i) {
+                    final entry = grouped[date]![i];
+                    return _TimelineEntry(
+                      entry: entry,
+                      habit: habitMap[entry.habitId],
+                    );
+                  },
+                  childCount: grouped[date]!.length,
+                ),
+              ),
+            ],
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: responsive.value(
+                  compact: 72,
+                  regular: 80,
+                  largePhone: 92,
+                ),
               ),
             ),
           ],
-          const SliverToBoxAdapter(child: SizedBox(height: 80)),
-        ],
+        ),
       ),
     );
   }
@@ -79,17 +97,21 @@ class TimelineScreen extends ConsumerWidget {
 // ── Sticky date header ────────────────────────────────────────────────────────
 
 class _DateHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _DateHeaderDelegate({required this.label});
+  const _DateHeaderDelegate({
+    required this.label,
+    required this.horizontalPadding,
+    required this.height,
+  });
 
   final String label;
-
-  static const double _height = 44;
-
-  @override
-  double get minExtent => _height;
+  final double horizontalPadding;
+  final double height;
 
   @override
-  double get maxExtent => _height;
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
 
   @override
   Widget build(
@@ -102,9 +124,7 @@ class _DateHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.screenPadding,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: Text(
             label,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -119,7 +139,10 @@ class _DateHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_DateHeaderDelegate old) => old.label != label;
+  bool shouldRebuild(_DateHeaderDelegate old) =>
+      old.label != label ||
+      old.horizontalPadding != horizontalPadding ||
+      old.height != height;
 }
 
 // ── Individual timeline entry card ────────────────────────────────────────────
@@ -161,13 +184,16 @@ class _TimelineEntryState extends State<_TimelineEntry> {
 
   @override
   Widget build(BuildContext context) {
+    final responsive = ResponsiveSpec.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final thumbSize =
+        responsive.value(compact: 74, regular: 88, largePhone: 94);
+    final horizontalPadding = responsive.horizontalPadding;
+    final isCompact = responsive.isCompact;
+    final detailPadding = isCompact ? 10.0 : 12.0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.screenPadding,
-        vertical: 5,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 5),
       child: GestureDetector(
         onTap: () => Navigator.of(context)
             .pushNamed(AppRoutes.proofDetail, arguments: widget.entry.id),
@@ -195,8 +221,8 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                     bottomLeft: Radius.circular(AppConstants.cardRadius),
                   ),
                   child: SizedBox(
-                    width: 88,
-                    height: 88,
+                    width: thumbSize,
+                    height: thumbSize,
                     child: _file != null
                         ? Stack(
                             fit: StackFit.expand,
@@ -204,7 +230,7 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                               Image.file(
                                 _file!,
                                 fit: BoxFit.cover,
-                                cacheWidth: 176,
+                                cacheWidth: (thumbSize * 2).round(),
                               ),
                               if (widget.entry.isVideo)
                                 Positioned(
@@ -214,7 +240,8 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 4, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.65),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.65),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Row(
@@ -246,7 +273,7 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                               widget.entry.isVideo
                                   ? Icons.videocam_outlined
                                   : Icons.image_outlined,
-                              color: Colors.grey,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                   ),
@@ -255,7 +282,12 @@ class _TimelineEntryState extends State<_TimelineEntry> {
               // Details
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+                  padding: EdgeInsets.fromLTRB(
+                    detailPadding,
+                    detailPadding,
+                    isCompact ? 6 : 8,
+                    detailPadding,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -265,9 +297,9 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                           if (widget.habit != null) ...[
                             Text(
                               widget.habit!.emoji,
-                              style: const TextStyle(fontSize: 15),
+                              style: TextStyle(fontSize: isCompact ? 14 : 15),
                             ),
-                            const SizedBox(width: 6),
+                            SizedBox(width: isCompact ? 4 : 6),
                             Expanded(
                               child: Text(
                                 widget.habit!.name,
@@ -290,29 +322,35 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                             ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: isCompact ? 3 : 4),
                       // Time + optional duration for videos
                       Row(
                         children: [
                           Text(
                             AppDateUtils.formatTime(widget.entry.completedAt),
-                            style:
-                                Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                           ),
                           if (widget.entry.isVideo &&
                               widget.entry.formattedDuration.isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            const Icon(Icons.videocam_outlined,
-                                size: 12, color: Colors.grey),
+                            SizedBox(width: isCompact ? 4 : 6),
+                            Icon(
+                              Icons.videocam_outlined,
+                              size: isCompact ? 11 : 12,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 2),
                             Text(
                               widget.entry.formattedDuration,
                               style: Theme.of(context)
                                   .textTheme
                                   .labelSmall
-                                  ?.copyWith(color: colorScheme.onSurfaceVariant),
+                                  ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ],
@@ -320,12 +358,13 @@ class _TimelineEntryState extends State<_TimelineEntry> {
                       // Note preview
                       if (widget.entry.note != null &&
                           widget.entry.note!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+                        SizedBox(height: isCompact ? 3 : 4),
                         Text(
                           widget.entry.note!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -336,10 +375,13 @@ class _TimelineEntryState extends State<_TimelineEntry> {
               ),
               // Chevron
               Padding(
-                padding: const EdgeInsets.only(right: 10, top: 12),
+                padding: EdgeInsets.only(
+                  right: isCompact ? 6 : 10,
+                  top: detailPadding,
+                ),
                 child: Icon(
                   Icons.chevron_right,
-                  size: 20,
+                  size: isCompact ? 18 : 20,
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),

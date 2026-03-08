@@ -16,11 +16,16 @@ class DailyProgressRing extends StatelessWidget {
   final double size;
   final double strokeWidth;
 
-  double get _progress => total == 0 ? 0 : completed / total;
+  double get _progress => total == 0 ? 0 : (completed / total).clamp(0.0, 1.0);
 
   @override
   Widget build(BuildContext context) {
     final isDone = total > 0 && completed >= total;
+    final cs = Theme.of(context).colorScheme;
+
+    // M3 tonal colours: track = surfaceContainerHighest, progress = primary (or tertiary when done)
+    final progressColor = isDone ? AppColors.success : cs.primary;
+    final trackColor = cs.surfaceContainerHighest;
 
     return SizedBox(
       width: size,
@@ -28,8 +33,8 @@ class DailyProgressRing extends StatelessWidget {
       child: CustomPaint(
         painter: _RingPainter(
           progress: _progress,
-          trackColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          progressColor: isDone ? AppColors.success : AppColors.primary,
+          trackColor: trackColor,
+          progressColor: progressColor,
           strokeWidth: strokeWidth,
         ),
         child: Center(
@@ -41,15 +46,17 @@ class DailyProgressRing extends StatelessWidget {
                 Text(
                   '$completed',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: isDone ? AppColors.success : AppColors.primary,
+                        color: progressColor,
                         fontWeight: FontWeight.w700,
                         height: 1,
                       ),
                 ),
                 Text(
                   'of $total',
-                  style:
-                      Theme.of(context).textTheme.labelSmall?.copyWith(height: 1),
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(height: 1),
                 ),
               ],
             ),
@@ -90,10 +97,8 @@ class _RingPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    // Track
     canvas.drawCircle(center, radius, trackPaint);
 
-    // Progress arc
     if (progress > 0) {
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),

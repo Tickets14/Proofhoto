@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/image_utils.dart';
 import '../../../../core/utils/video_utils.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/utils/responsive_utils.dart';
 
 class HabitCard extends ConsumerWidget {
   const HabitCard({
@@ -20,120 +21,108 @@ class HabitCard extends ConsumerWidget {
 
   final Habit habit;
   final bool isFrozen;
-  /// When non-null, a drag handle is shown that lets the user reorder the card
-  /// in a [SliverReorderableList]. The value is the item's current index.
+
+  /// When non-null, a drag handle is shown for reordering.
   final int? dragIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final responsive = ResponsiveSpec.of(context);
+    final compact = responsive.isCompact;
     final isCompleted = ref.watch(isCompletedTodayProvider(habit.id));
     final proofEntry = isCompleted
         ? ref.watch(habitProofProvider(habit.id)).firstOrNull
         : null;
     final streak = ref.watch(habitStreakProvider(habit.id));
-    final color = Color(habit.colorValue);
+    final habitColor = Color(habit.colorValue);
+    final cs = Theme.of(context).colorScheme;
+
+    // M3 surface roles: completed = tonal surface with habit colour tint,
+    // frozen = ice tint, default = surfaceContainerLow
+    final cardColor = isCompleted
+        ? Color.alphaBlend(
+            habitColor.withValues(alpha: 0.06), cs.surfaceContainerLow)
+        : cs.surfaceContainerLow;
+
+    final borderColor = isCompleted
+        ? habitColor.withValues(alpha: 0.35)
+        : isFrozen
+            ? Colors.lightBlue.withValues(alpha: 0.45)
+            : cs.outlineVariant;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      padding: EdgeInsets.symmetric(
+        horizontal: responsive.horizontalPadding,
+        vertical: compact ? 3 : 4,
+      ),
       child: GestureDetector(
         onTap: () => _onTap(context, isCompleted, proofEntry),
-        onLongPress: () =>
-            Navigator.of(context).pushNamed(AppRoutes.editHabit, arguments: habit.id),
+        onLongPress: () => Navigator.of(context)
+            .pushNamed(AppRoutes.editHabit, arguments: habit.id),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isCompleted
-                  ? color.withOpacity(0.4)
-                  : isFrozen
-                      ? Colors.lightBlue.withOpacity(0.4)
-                      : Colors.transparent,
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            color: cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
           ),
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : 12,
+            vertical: compact ? 10 : 12,
+          ),
           child: Row(
             children: [
-              // Emoji icon
               _EmojiIcon(
                 emoji: habit.emoji,
-                color: color,
+                color: habitColor,
                 isCompleted: isCompleted,
                 isFrozen: isFrozen,
+                compact: compact,
               ),
-              const SizedBox(width: 14),
-              // Name + streak + status
+              SizedBox(width: compact ? 10 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       habit.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            decoration: isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            decoration:
+                                isCompleted ? TextDecoration.lineThrough : null,
+                            decorationColor: cs.onSurfaceVariant,
                             color: isCompleted
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant
-                                : null,
+                                ? cs.onSurfaceVariant
+                                : cs.onSurface,
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        if (streak > 0) ...[
-                          Text(
-                            '🔥 $streak',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        _StatusChip(
-                          isCompleted: isCompleted,
-                          isFrozen: isFrozen,
-                          color: color,
-                        ),
-                      ],
+                    _StatusRow(
+                      isCompleted: isCompleted,
+                      isFrozen: isFrozen,
+                      streak: streak,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              // Right side: proof thumbnail or action indicator
+              SizedBox(width: compact ? 8 : 10),
               _RightWidget(
                 isCompleted: isCompleted,
                 isFrozen: isFrozen,
                 proofEntry: proofEntry,
                 habitId: habit.id,
-                color: color,
+                habitColor: habitColor,
+                compact: compact,
               ),
               if (dragIndex != null) ...[
                 const SizedBox(width: 6),
                 ReorderableDragStartListener(
                   index: dragIndex!,
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(
-                      Icons.drag_handle_rounded,
-                      size: 20,
-                      color: Colors.grey,
-                    ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.drag_handle_rounded,
+                        size: 20, color: cs.onSurfaceVariant),
                   ),
                 ),
               ],
@@ -155,81 +144,101 @@ class HabitCard extends ConsumerWidget {
   }
 }
 
+// ── Emoji icon ────────────────────────────────────────────────────────────────
+
 class _EmojiIcon extends StatelessWidget {
   const _EmojiIcon({
     required this.emoji,
     required this.color,
     required this.isCompleted,
     required this.isFrozen,
+    required this.compact,
   });
 
   final String emoji;
   final Color color;
   final bool isCompleted;
   final bool isFrozen;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final bg = isFrozen
-        ? Colors.lightBlue.withOpacity(0.15)
-        : isCompleted
-            ? color.withOpacity(0.15)
-            : color.withOpacity(0.1);
+        ? Colors.lightBlue.withValues(alpha: 0.15)
+        : color.withValues(alpha: isCompleted ? 0.18 : 0.10);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
-      width: 48,
-      height: 48,
+      width: compact ? 42 : 48,
+      height: compact ? 42 : 48,
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(compact ? 10 : 12),
       ),
       alignment: Alignment.center,
       child: Text(
         isFrozen ? '❄️' : emoji,
-        style: const TextStyle(fontSize: 24),
+        style: TextStyle(fontSize: compact ? 20 : 24),
       ),
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({
+// ── Status row ────────────────────────────────────────────────────────────────
+
+class _StatusRow extends StatelessWidget {
+  const _StatusRow({
     required this.isCompleted,
     required this.isFrozen,
-    required this.color,
+    required this.streak,
   });
 
   final bool isCompleted;
   final bool isFrozen;
-  final Color color;
+  final int streak;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final ts = Theme.of(context).textTheme.labelSmall;
+
     if (isFrozen) {
       return Text(
         '❄️ Streak frozen',
-        style: Theme.of(context)
-            .textTheme
-            .labelSmall
-            ?.copyWith(color: Colors.lightBlue),
+        style: ts?.copyWith(color: Colors.lightBlue.shade300),
       );
     }
-    if (isCompleted) {
-      return Text(
-        '✅ Done',
-        style: Theme.of(context)
-            .textTheme
-            .labelSmall
-            ?.copyWith(color: AppColors.success),
-      );
-    }
-    return Text(
-      'Tap to add proof',
-      style: Theme.of(context).textTheme.labelSmall,
+
+    return Row(
+      children: [
+        if (streak > 0) ...[
+          Text(
+            '🔥 $streak',
+            style: ts?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 6),
+          Text('·', style: ts?.copyWith(color: cs.onSurfaceVariant)),
+          const SizedBox(width: 6),
+        ],
+        Flexible(
+          child: Text(
+            isCompleted ? 'Done' : 'Tap to add proof',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: isCompleted
+                ? ts?.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w500,
+                  )
+                : ts?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ),
+      ],
     );
   }
 }
+
+// ── Right widget ──────────────────────────────────────────────────────────────
 
 class _RightWidget extends ConsumerWidget {
   const _RightWidget({
@@ -237,14 +246,16 @@ class _RightWidget extends ConsumerWidget {
     required this.isFrozen,
     required this.proofEntry,
     required this.habitId,
-    required this.color,
+    required this.habitColor,
+    required this.compact,
   });
 
   final bool isCompleted;
   final bool isFrozen;
   final ProofEntry? proofEntry;
   final String habitId;
-  final Color color;
+  final Color habitColor;
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -253,40 +264,49 @@ class _RightWidget extends ConsumerWidget {
         imagePath: proofEntry!.imagePath,
         proofId: proofEntry!.id,
         isVideo: proofEntry!.isVideo,
+        compact: compact,
       );
     }
 
     if (isFrozen) {
-      return const SizedBox(
-        width: 44,
-        height: 44,
+      return SizedBox(
+        width: compact ? 40 : 44,
+        height: compact ? 40 : 44,
         child: Center(
-          child: Text('❄️', style: TextStyle(fontSize: 24)),
+          child: Text('❄️', style: TextStyle(fontSize: compact ? 20 : 24)),
         ),
       );
     }
 
     return Container(
-      width: 44,
-      height: 44,
+      width: compact ? 40 : 44,
+      height: compact ? 40 : 44,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: habitColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(compact ? 10 : 12),
       ),
-      child: Icon(Icons.camera_alt_outlined, color: color, size: 20),
+      child: Icon(
+        Icons.camera_alt_outlined,
+        color: habitColor,
+        size: compact ? 18 : 20,
+      ),
     );
   }
 }
+
+// ── Proof thumbnail ───────────────────────────────────────────────────────────
 
 class _ProofThumbnail extends StatefulWidget {
   const _ProofThumbnail({
     required this.imagePath,
     required this.proofId,
     required this.isVideo,
+    required this.compact,
   });
   final String imagePath;
   final String proofId;
   final bool isVideo;
+  final bool compact;
 
   @override
   State<_ProofThumbnail> createState() => _ProofThumbnailState();
@@ -315,40 +335,47 @@ class _ProofThumbnailState extends State<_ProofThumbnail> {
   Widget build(BuildContext context) {
     if (_file == null) {
       return Container(
-        width: 44,
-        height: 44,
+        width: widget.compact ? 40 : 44,
+        height: widget.compact ? 40 : 44,
         decoration: BoxDecoration(
           color: AppColors.success.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(widget.compact ? 10 : 12),
         ),
-        child: const Icon(Icons.check_circle, color: AppColors.success, size: 22),
+        child: Icon(
+          Icons.check_circle,
+          color: AppColors.success,
+          size: widget.compact ? 20 : 22,
+        ),
       );
     }
 
     return Hero(
       tag: 'proof_${widget.proofId}',
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(widget.compact ? 10 : 12),
         child: Stack(
           alignment: Alignment.center,
           children: [
             Image.file(
               _file!,
-              width: 44,
-              height: 44,
+              width: widget.compact ? 40 : 44,
+              height: widget.compact ? 40 : 44,
               fit: BoxFit.cover,
-              cacheWidth: 88,
+              cacheWidth: widget.compact ? 80 : 88,
             ),
             if (widget.isVideo)
               Container(
-                width: 18,
-                height: 18,
+                width: widget.compact ? 16 : 18,
+                height: widget.compact ? 16 : 18,
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.55),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.play_arrow,
-                    color: Colors.white, size: 12),
+                child: Icon(
+                  Icons.play_arrow,
+                  color: Colors.white,
+                  size: widget.compact ? 11 : 12,
+                ),
               ),
           ],
         ),

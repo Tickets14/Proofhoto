@@ -162,7 +162,7 @@ class _Placeholder extends StatelessWidget {
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Icon(
         isVideo ? Icons.videocam_outlined : Icons.image_outlined,
-        color: Colors.grey,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }

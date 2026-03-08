@@ -62,6 +62,11 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
   Widget build(BuildContext context) {
     final isEdit = _editing != null;
     final categories = ref.watch(categoriesProvider);
+    final categoryItemLabels = <String>[
+      'No category',
+      ...categories.map((cat) => '${cat.emoji} ${cat.name}'),
+      '+ Create new...',
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -69,7 +74,8 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
         actions: [
           if (isEdit)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              icon: Icon(Icons.delete_outline,
+                  color: Theme.of(context).colorScheme.error),
               tooltip: 'Delete habit',
               onPressed: _confirmDelete,
             ),
@@ -138,8 +144,7 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
                 trailing: _reminderTime != null
                     ? IconButton(
                         icon: const Icon(Icons.close, size: 18),
-                        onPressed: () =>
-                            setState(() => _reminderTime = null),
+                        onPressed: () => setState(() => _reminderTime = null),
                       )
                     : const Icon(Icons.chevron_right),
                 onTap: _pickTime,
@@ -152,33 +157,46 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
               title: 'Category',
               child: DropdownButtonFormField<String?>(
                 value: _categoryId,
+                isExpanded: true,
+                itemHeight: null,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.folder_outlined),
                 ),
+                selectedItemBuilder: (_) => categoryItemLabels
+                    .map(
+                      (label) => Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          label,
+                          softWrap: true,
+                          overflow: TextOverflow.visible,
+                        ),
+                      ),
+                    )
+                    .toList(),
                 items: [
                   const DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('No category'),
+                    child: Text(
+                      'No category',
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
+                    ),
                   ),
                   ...categories.map((cat) => DropdownMenuItem<String?>(
                         value: cat.id,
-                        child: Row(
-                          children: [
-                            Text(cat.emoji,
-                                style: const TextStyle(fontSize: 16)),
-                            const SizedBox(width: 8),
-                            Text(cat.name),
-                          ],
+                        child: Text(
+                          '${cat.emoji} ${cat.name}',
+                          softWrap: true,
+                          overflow: TextOverflow.visible,
                         ),
                       )),
                   const DropdownMenuItem<String?>(
                     value: '__create__',
-                    child: Row(
-                      children: [
-                        Icon(Icons.add, size: 18),
-                        SizedBox(width: 8),
-                        Text('Create new...'),
-                      ],
+                    child: Text(
+                      '+ Create new...',
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                 ],
@@ -313,19 +331,18 @@ class _EmojiPicker extends StatelessWidget {
         // Current emoji display + custom input
         Row(
           children: [
-            GestureDetector(
+            InkWell(
               onTap: () => _showGrid(context),
+              borderRadius: BorderRadius.circular(14),
               child: Container(
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 alignment: Alignment.center,
-                child: Text(selected,
-                    style: const TextStyle(fontSize: 28)),
+                child: Text(selected, style: const TextStyle(fontSize: 28)),
               ),
             ),
             const SizedBox(width: 12),
@@ -344,30 +361,16 @@ class _EmojiPicker extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 4,
+          runSpacing: 4,
           children: AppConstants.quickEmojis.map((e) {
-            final isSelected = e == selected;
-            return GestureDetector(
-              onTap: () => onSelected(e),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primary.withOpacity(0.15)
-                      : Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(10),
-                  border: isSelected
-                      ? Border.all(color: AppColors.primary, width: 2)
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child: Text(e, style: const TextStyle(fontSize: 20)),
-              ),
+            return FilterChip(
+              label: Text(e, style: const TextStyle(fontSize: 20)),
+              selected: e == selected,
+              onSelected: (_) => onSelected(e),
+              padding: EdgeInsets.zero,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             );
           }).toList(),
         ),
@@ -392,8 +395,9 @@ class _ColorPicker extends StatelessWidget {
       runSpacing: 10,
       children: AppColors.habitColors.map((color) {
         final isSelected = color.value == selected;
-        return GestureDetector(
+        return InkWell(
           onTap: () => onSelected(color.value),
+          customBorder: const CircleBorder(),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             width: 36,
@@ -410,7 +414,7 @@ class _ColorPicker extends StatelessWidget {
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: color.withOpacity(0.5),
+                        color: color.withValues(alpha: 0.5),
                         blurRadius: 8,
                         spreadRadius: 2,
                       ),
@@ -436,35 +440,34 @@ class _DayPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(7, (i) {
         final day = i + 1; // 1=Mon…7=Sun
         final isOn = selected.contains(day);
-        return GestureDetector(
+        return InkWell(
           onTap: () {
             final next = isOn
                 ? selected.where((d) => d != day).toList()
-                : [...selected, day]..sort();
+                : [...selected, day]
+              ..sort();
             onChanged(next);
           },
+          customBorder: const CircleBorder(),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: isOn
-                  ? AppColors.primary
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: isOn ? cs.primary : cs.surfaceContainerHighest,
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
             child: Text(
               _dayShort[i],
               style: TextStyle(
-                color: isOn
-                    ? Colors.white
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: isOn ? cs.onPrimary : cs.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),

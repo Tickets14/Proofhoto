@@ -93,7 +93,9 @@ class MonthlyHeatmap extends StatelessWidget {
                       : _cellColor(ratio, isDark),
                   borderRadius: BorderRadius.circular(4),
                   border: isToday
-                      ? Border.all(color: AppColors.primary, width: 2)
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 2)
                       : null,
                 ),
                 child: isInFuture

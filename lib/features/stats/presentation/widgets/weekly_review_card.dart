@@ -23,15 +23,11 @@ class WeeklyReviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +48,7 @@ class WeeklyReviewCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _rateColor.withOpacity(0.12),
+                  color: _rateColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -90,6 +86,6 @@ class WeeklyReviewCard extends StatelessWidget {
   Color get _rateColor {
     if (_rate >= 0.8) return AppColors.success;
     if (_rate >= 0.5) return AppColors.warning;
-    return AppColors.secondary;
+    return AppColors.error;
   }
 }

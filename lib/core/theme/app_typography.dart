@@ -7,7 +7,7 @@ abstract final class AppTypography {
   static TextTheme darkTextTheme = _buildTextTheme(AppColors.textPrimaryDark);
 
   static TextTheme _buildTextTheme(Color textColor) {
-    final secondary = textColor.withOpacity(0.6);
+    final secondary = textColor.withValues(alpha: 0.6);
     return TextTheme(
       // Headings — Poppins
       displayLarge: GoogleFonts.poppins(

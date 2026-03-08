@@ -275,7 +275,9 @@ class _BadgeDetailSheet extends StatelessWidget {
           Text(badge.emoji,
               style: TextStyle(
                   fontSize: 64,
-                  color: isUnlocked ? null : Colors.grey.shade400)),
+                  color: isUnlocked
+                      ? null
+                      : Theme.of(context).colorScheme.outlineVariant)),
           const SizedBox(height: 12),
 
           // Name

@@ -156,8 +156,8 @@ class _CategoryTile extends StatelessWidget {
               onPressed: onEdit,
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline, size: 20,
-                  color: Colors.red),
+              icon: Icon(Icons.delete_outline, size: 20,
+                  color: Theme.of(context).colorScheme.error),
               onPressed: onDelete,
             ),
           ],

@@ -9,7 +9,6 @@ import '../../../habits/data/models/habit.dart';
 import '../../../habits/presentation/controllers/habit_controller.dart';
 import '../../../achievements/presentation/controllers/achievement_controller.dart';
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/theme/app_colors.dart';
 
 class CaptureProofScreen extends ConsumerStatefulWidget {
   const CaptureProofScreen({super.key, required this.habitId});
@@ -164,7 +163,7 @@ class _CaptureProofScreenState extends ConsumerState<CaptureProofScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to save proof: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -269,7 +268,6 @@ class _PickerView extends StatelessWidget {
             icon: Icons.camera_alt_rounded,
             label: 'Take a Photo',
             subtitle: 'Use your camera',
-            color: AppColors.primary,
             onTap: onCamera,
           ),
           const SizedBox(height: 16),
@@ -277,7 +275,6 @@ class _PickerView extends StatelessWidget {
             icon: Icons.videocam_rounded,
             label: 'Record Video',
             subtitle: 'Up to ${AppConstants.videoMaxSeconds} seconds',
-            color: Colors.deepPurple,
             onTap: onVideo,
           ),
           const SizedBox(height: 16),
@@ -285,7 +282,6 @@ class _PickerView extends StatelessWidget {
             icon: Icons.photo_library_rounded,
             label: 'Choose from Gallery',
             subtitle: 'Select a photo or video',
-            color: AppColors.secondary,
             onTap: onGallery,
           ),
         ],
@@ -299,50 +295,48 @@ class _PickerButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.subtitle,
-    required this.color,
     required this.onTap,
   });
   final IconData icon;
   final String label;
   final String subtitle;
-  final Color color;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(14),
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: cs.onPrimaryContainer, size: 28),
               ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(color: color)),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-          ],
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(color: cs.onSurface)),
+                  Text(subtitle,
+                      style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -537,22 +531,24 @@ class _VideoPreviewViewState extends State<_VideoPreviewView> {
             children: [
               // Duration warning
               if (_initialized && !isValid)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border:
-                        Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                  ),
-                  child: Text(
-                    'Video must be ${AppConstants.videoMaxSeconds} seconds or less. '
-                    'Please choose a shorter clip.',
-                    style: const TextStyle(color: Colors.red, fontSize: 13),
-                  ),
-                ),
+                Builder(builder: (context) {
+                  final cs = Theme.of(context).colorScheme;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: cs.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Video must be ${AppConstants.videoMaxSeconds} seconds or less. '
+                      'Please choose a shorter clip.',
+                      style:
+                          TextStyle(color: cs.onErrorContainer, fontSize: 13),
+                    ),
+                  );
+                }),
 
               // Seek bar
               SliderTheme(
@@ -587,7 +583,9 @@ class _VideoPreviewViewState extends State<_VideoPreviewView> {
                     Text(
                       _fmt(duration),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: isValid ? null : Colors.red,
+                            color: isValid
+                                ? null
+                                : Theme.of(context).colorScheme.error,
                             fontWeight: FontWeight.w600,
                           ),
                     ),
@@ -683,6 +681,7 @@ class _SuccessView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: ScaleTransition(
         scale: animation,
@@ -692,11 +691,11 @@ class _SuccessView extends StatelessWidget {
             Container(
               width: 100,
               height: 100,
-              decoration: const BoxDecoration(
-                color: AppColors.success,
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check, color: Colors.white, size: 56),
+              child: Icon(Icons.check, color: cs.onPrimaryContainer, size: 56),
             ),
             const SizedBox(height: 20),
             Text('Habit completed!',

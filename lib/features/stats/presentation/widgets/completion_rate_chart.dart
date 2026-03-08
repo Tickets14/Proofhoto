@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/app_colors.dart';
 
 class CompletionRateChart extends StatelessWidget {
   const CompletionRateChart({
@@ -14,8 +13,8 @@ class CompletionRateChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final labelColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    final cs = Theme.of(context).colorScheme;
+    final labelColor = cs.onSurfaceVariant;
 
     final spots = weeklyRates.asMap().entries.map((e) {
       return FlSpot(e.key.toDouble(), e.value.rate * 100);
@@ -31,12 +30,12 @@ class CompletionRateChart extends StatelessWidget {
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (_) =>
-                  isDark ? const Color(0xFF2A2A3E) : Colors.white,
+                  Theme.of(context).colorScheme.surfaceContainer,
               getTooltipItems: (spots) => spots
                   .map((s) => LineTooltipItem(
                         '${s.y.toInt()}%',
                         TextStyle(
-                          color: AppColors.primary,
+                          color: cs.primary,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -92,7 +91,7 @@ class CompletionRateChart extends StatelessWidget {
             drawVerticalLine: false,
             horizontalInterval: 25,
             getDrawingHorizontalLine: (value) => FlLine(
-              color: labelColor.withOpacity(0.15),
+              color: labelColor.withValues(alpha:0.15),
               strokeWidth: 1,
             ),
           ),
@@ -101,7 +100,7 @@ class CompletionRateChart extends StatelessWidget {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: AppColors.primary,
+              color: cs.primary,
               barWidth: 2.5,
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
@@ -110,8 +109,8 @@ class CompletionRateChart extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppColors.primary.withOpacity(0.25),
-                    AppColors.primary.withOpacity(0.0),
+                    cs.primary.withValues(alpha:0.25),
+                    cs.primary.withValues(alpha:0.0),
                   ],
                 ),
               ),

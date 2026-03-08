@@ -1,6 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 
 class WeeklyBarChart extends StatelessWidget {
@@ -16,7 +15,6 @@ class WeeklyBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final labelColor = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Container(
@@ -28,11 +26,11 @@ class WeeklyBarChart extends StatelessWidget {
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
               getTooltipColor: (_) =>
-                  isDark ? const Color(0xFF2A2A3E) : Colors.white,
+                  Theme.of(context).colorScheme.surfaceContainer,
               getTooltipItem: (group, _, rod, __) => BarTooltipItem(
                 '${rod.toY.toInt()} done',
                 TextStyle(
-                  color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
@@ -87,13 +85,16 @@ class WeeklyBarChart extends StatelessWidget {
             horizontalInterval:
                 maxHabits <= 4 ? 1 : (maxHabits / 4).ceilToDouble(),
             getDrawingHorizontalLine: (value) => FlLine(
-              color: labelColor.withOpacity(0.15),
+              color: labelColor.withValues(alpha: 0.15),
               strokeWidth: 1,
             ),
           ),
           borderData: FlBorderData(show: false),
           barGroups: List.generate(7, (i) {
             final isToday = i == 6;
+            // M3: today bar = primary, past bars = primaryContainer
+            final cs = Theme.of(context).colorScheme;
+            final barColor = isToday ? cs.primary : cs.primaryContainer;
             return BarChartGroupData(
               x: i,
               barRods: [
@@ -101,16 +102,7 @@ class WeeklyBarChart extends StatelessWidget {
                   toY: completionsPerDay[i].toDouble(),
                   width: 22,
                   borderRadius: BorderRadius.circular(6),
-                  gradient: LinearGradient(
-                    colors: isToday
-                        ? [AppColors.secondary, AppColors.primary]
-                        : [
-                            AppColors.primary.withOpacity(0.7),
-                            AppColors.primary,
-                          ],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
+                  color: barColor,
                 ),
               ],
             );

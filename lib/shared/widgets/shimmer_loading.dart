@@ -42,8 +42,8 @@ class _ShimmerBoxState extends State<ShimmerBox>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final base = isDark ? Colors.white10 : Colors.black.withOpacity(0.08);
-    final highlight = isDark ? Colors.white24 : Colors.black.withOpacity(0.16);
+    final base = isDark ? Colors.white10 : Colors.black.withValues(alpha:0.08);
+    final highlight = isDark ? Colors.white24 : Colors.black.withValues(alpha:0.16);
 
     return AnimatedBuilder(
       animation: _anim,
@@ -83,7 +83,7 @@ class HabitCardShimmer extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha:0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
